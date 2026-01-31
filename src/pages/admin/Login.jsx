@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -13,7 +15,7 @@ const Login = () => {
         setError('');
 
         try {
-            const res = await fetch('/api/login', {
+            const res = await fetch('http://localhost:3000/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -25,10 +27,11 @@ const Login = () => {
                 localStorage.setItem('adminToken', data.token);
                 navigate('/admin');
             } else {
-                setError('Invalid Credentials');
+                setError(data.message || 'Invalid Credentials');
             }
         } catch (err) {
-            setError('Login Failed. Check Server.');
+            setError('Login Failed. Check if server is running on port 3000.');
+            console.error('Login error:', err);
         }
     };
 
@@ -64,12 +67,22 @@ const Login = () => {
                     </div>
                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-[#0a192f]/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-secondary transition-colors"
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-[#0a192f]/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-secondary transition-colors pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
 
                     <button

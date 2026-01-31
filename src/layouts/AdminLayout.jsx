@@ -7,12 +7,44 @@ const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isValidating, setIsValidating] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-            navigate('/admin/login');
-        }
+        const validateToken = async () => {
+            const token = localStorage.getItem('adminToken');
+            
+            if (!token) {
+                navigate('/admin/login');
+                setIsValidating(false);
+                return;
+            }
+            
+            try {
+                // Validate token with server
+                const response = await fetch('http://localhost:3000/api/validate-token', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    // Token is invalid, remove it and redirect to login
+                    localStorage.removeItem('adminToken');
+                    navigate('/admin/login');
+                } else {
+                    // Token is valid, allow access
+                    setIsValidating(false);
+                }
+            } catch (error) {
+                console.error('Token validation failed:', error);
+                localStorage.removeItem('adminToken');
+                navigate('/admin/login');
+            }
+        };
+        
+        validateToken();
     }, [navigate]);
 
     const handleLogout = () => {
@@ -27,6 +59,18 @@ const AdminLayout = () => {
         { icon: Bell, label: 'Notifications', path: '/admin/notifications' },
         { icon: Settings, label: 'Settings', path: '/admin/settings' },
     ];
+
+    // Show loading state while validating token
+    if (isValidating) {
+        return (
+            <div className="flex min-h-screen bg-black text-white items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-secondary border-t-transparent mb-4"></div>
+                    <p className="text-white/60">Validating session...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-screen bg-black text-white selection:bg-secondary selection:text-black font-sans">

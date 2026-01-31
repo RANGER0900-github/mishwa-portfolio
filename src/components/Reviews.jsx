@@ -16,45 +16,6 @@ const Reviews = () => {
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto">
-                {/* About & Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mb-40">
-                    <motion.div
-                        initial={{ opacity: 0, x: -50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.8 }}
-                    >
-                        <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 group">
-                            <img src="/images/mishwa_portrait.png" alt="Mishwa" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 will-change-transform" />
-                            <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
-                        </div>
-                    </motion.div>
-
-                    <div>
-                        <span className="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">About Me</span>
-                        <h2 className="text-5xl md:text-6xl font-display font-bold text-white mb-6">More Than Just Cuts.</h2>
-                        <p className="text-gray-400 text-lg leading-relaxed mb-8">
-                            I'm Mishwa, a visual artist who understands the psychology of attention.
-                            My edits don't just look good—they perform. With a focus on pacing, sound design, and visual storytelling,
-                            I help brands convert viewers into followers.
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-8">
-                            <div>
-                                <h4 className="text-3xl font-bold text-white">3+</h4>
-                                <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">Years</p>
-                            </div>
-                            <div>
-                                <h4 className="text-3xl font-bold text-white">500+</h4>
-                                <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">Polished</p>
-                            </div>
-                            <div>
-                                <h4 className="text-3xl font-bold text-white">50M+</h4>
-                                <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">Views</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Reviews */}
                 <div className="mb-40">
                     <div className="text-center mb-20">

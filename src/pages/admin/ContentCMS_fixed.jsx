@@ -68,14 +68,7 @@ const ContentCMS = () => {
         const updatedProjects = localContent.projects.map(p =>
             p.id === id ? { ...p, [field]: value } : p
         );
-        const newContent = { ...localContent, projects: updatedProjects };
-        trackChange(newContent);
-
-        // If preview for this project is open, keep it in sync with edits
-        if (previewProject?.id === id) {
-            const updated = updatedProjects.find(p => p.id === id);
-            setPreviewProject(updated);
-        }
+        trackChange({ ...localContent, projects: updatedProjects });
     };
 
     const addProject = () => {
@@ -136,15 +129,14 @@ const ContentCMS = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploading(currentUploadTarget.id || 'global');
+        setUploading(currentUploadTarget.id);
 
         try {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const base64 = event.target?.result;
-                const endpoint = currentUploadTarget.type === 'headerIcon' ? '/api/upload/header-icon' : '/api/upload';
 
-                const response = await fetch(`http://localhost:3000${endpoint}`, {
+                const response = await fetch('http://localhost:3000/api/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -155,26 +147,13 @@ const ContentCMS = () => {
                 });
 
                 const data = await response.json();
-
-                if (currentUploadTarget.type === 'project' && data.url) {
-                    handleProjectChange(currentUploadTarget.id, 'image', data.url);
+                if (data.url) {
+                    if (currentUploadTarget.type === 'project') {
+                        handleProjectChange(currentUploadTarget.id, 'image', data.url);
+                    } else if (currentUploadTarget.type === 'review') {
+                        handleReviewChange(currentUploadTarget.id, 'image', data.url);
+                    }
                     toast.success('Image uploaded!');
-                } else if (currentUploadTarget.type === 'review' && data.url) {
-                    handleReviewChange(currentUploadTarget.id, 'image', data.url);
-                    toast.success('Image uploaded!');
-                } else if (currentUploadTarget.type === 'aboutImage') {
-                    const aboutUrl = data.url || data.defaultUrl || (data.variants && data.variants['180px']) || (data.variants && Object.values(data.variants)[0]);
-                    trackChange({ ...localContent, about: { ...localContent.about, image: aboutUrl } });
-                    toast.success('About image uploaded!');
-                } else if (currentUploadTarget.type === 'headerIcon') {
-                    const defaultUrl = data.defaultUrl || (data.variants && data.variants['180px']) || (data.variants && Object.values(data.variants)[0]);
-                    trackChange({ ...localContent, headerIcon: defaultUrl, headerIconVariants: data.variants || {} });
-                    toast.success('Header icon uploaded!');
-                } else if (data.url) {
-                    // Generic fallback
-                    toast.success('Image uploaded!');
-                } else {
-                    toast.error('Upload failed');
                 }
             };
             reader.readAsDataURL(file);
@@ -235,16 +214,7 @@ const ContentCMS = () => {
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
-                    onWheel={(e) => e.stopPropagation()}
                 >
-                    <motion.button
-                        onClick={onClose}
-                        className="absolute -top-3 -right-3 z-60 w-10 h-10 bg-primary text-black rounded-full flex items-center justify-center font-bold hover:scale-110 transition-transform"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        ✕
-                    </motion.button>
                     <div
                         ref={previewRef}
                         className="relative rounded-3xl overflow-hidden border-8 border-primary/40 shadow-2xl bg-gradient-to-br from-primary/5 to-secondary/5"
@@ -349,7 +319,7 @@ const ContentCMS = () => {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpload}
-                accept="image/svg+xml,image/jpeg,image/png,image/gif,image/webp"
+                accept="image/jpeg,image/png,image/gif,image/webp"
                 className="hidden"
             />
 
@@ -393,7 +363,7 @@ const ContentCMS = () => {
             </AnimatePresence>
 
             <div className="flex gap-3 mb-8 overflow-x-auto pb-2 flex-wrap">
-                {['projects', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer'].map(tab => (
+                {['projects', 'reviews', 'hero', 'social', 'footer'].map(tab => (
                     <motion.button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -493,9 +463,8 @@ const ContentCMS = () => {
                                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                                             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                                                            className="absolute top-full left-0 right-0 mt-3 z-50 max-h-[300px] overflow-y-auto p-2 bg-[#0a192f] border border-white/10 rounded-xl"
+                                                            className="absolute top-full left-0 right-0 mt-3 z-50"
                                                             onClick={(e) => e.stopPropagation()}
-                                                            onWheel={(e) => e.stopPropagation()}
                                                         >
                                                             <SmoothColorPicker
                                                                 value={project.textColor || '#ffffff'}
@@ -619,163 +588,6 @@ const ContentCMS = () => {
                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 flex items-center gap-2"><Twitter size={14} /> Twitter/X</label>
                                 <input type="url" value={localContent.social?.twitter || ''} onChange={(e) => trackChange({ ...localContent, social: { ...localContent.social, twitter: e.target.value } })} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="https://x.com/username" />
                             </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {activeTab === 'cinema' && (
-                    <motion.div key="cinema" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-4xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
-                            <h3 className="text-lg font-bold text-white mb-4">Cinema Section</h3>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Section Title</label>
-                                    <input type="text" value={localContent.cinema?.title || ''} onChange={(e) => trackChange({ ...localContent, cinema: { ...localContent.cinema, title: e.target.value } })} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="Long Form Works" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Subtitle</label>
-                                    <input type="text" value={localContent.cinema?.subtitle || ''} onChange={(e) => trackChange({ ...localContent, cinema: { ...localContent.cinema, subtitle: e.target.value } })} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="Cinematic" />
-                                </div>
-                            </div>
-
-                            <div className="border-t border-white/10 pt-6">
-                                <h4 className="text-sm font-bold text-white mb-4">Cinematic Works</h4>
-                                {localContent.cinema?.items && localContent.cinema.items.map((item, idx) => (
-                                    <div key={idx} className="mb-6 pb-6 border-b border-white/5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Title</label>
-                                                <input type="text" value={item.title || ''} onChange={(e) => {
-                                                    const items = [...localContent.cinema.items];
-                                                    items[idx].title = e.target.value;
-                                                    trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                                }} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="The Summit" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Category</label>
-                                                <input type="text" value={item.category || ''} onChange={(e) => {
-                                                    const items = [...localContent.cinema.items];
-                                                    items[idx].category = e.target.value;
-                                                    trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                                }} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="Documentary" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Description</label>
-                                            <textarea value={item.description || ''} onChange={(e) => {
-                                                const items = [...localContent.cinema.items];
-                                                items[idx].description = e.target.value;
-                                                trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                            }} rows={2} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none resize-none" placeholder="A journey to the highest peaks using cinematic drone shots." />
-                                        </div>
-                                        <div className="mt-4">
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Image URL</label>
-                                            <input type="text" value={item.image || ''} onChange={(e) => {
-                                                const items = [...localContent.cinema.items];
-                                                items[idx].image = e.target.value;
-                                                trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                            }} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none font-mono text-xs" placeholder="https://..." />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {activeTab === 'about' && (
-                    <motion.div key="about" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
-                            <h3 className="text-lg font-bold text-white mb-4">About Section</h3>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">About Image</label>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-32 h-32 rounded-lg overflow-hidden bg-black/30 border border-white/10">
-                                        {localContent.about?.image ? <img src={localContent.about.image} alt="About" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-500">No image</div>}
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <button onClick={() => triggerUpload('aboutImage', null)} className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-bold">Upload Image</button>
-                                        <input type="text" value={localContent.about?.image || ''} onChange={(e) => trackChange({ ...localContent, about: { ...localContent.about, image: e.target.value } })} className="mt-2 w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-2 text-sm font-mono text-cyan-300" placeholder="https://..." />
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">About Text</label>
-                                <textarea value={localContent.about?.text || ''} onChange={(e) => trackChange({ ...localContent, about: { ...localContent.about, text: e.target.value } })} rows={4} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none resize-none" placeholder="Write a short about section..." />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Metrics (Metric 1, Metric 2, Metric 3)</label>
-                                <div className="space-y-3">
-                                    <div>
-                                        <p className="text-xs text-gray-400 mb-2">Metric 1 (e.g., 500+ Polished)</p>
-                                        <div className="flex gap-2">
-                                            <input type="number" value={localContent.about?.metrics?.[0] || 0} onChange={(e) => {
-                                                const m = [...(localContent.about?.metrics || [0,0,0])]; m[0]=parseInt(e.target.value||0);
-                                                trackChange({ ...localContent, about: { ...localContent.about, metrics: m } });
-                                            }} className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="e.g., 500" />
-                                            <input type="text" value={localContent.about?.metricLabels?.[0] || 'Polished'} onChange={(e) => {
-                                                const l = [...(localContent.about?.metricLabels || ['Polished', 'Years', 'Views'])]; l[0]=e.target.value;
-                                                trackChange({ ...localContent, about: { ...localContent.about, metricLabels: l } });
-                                            }} className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="Label" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 mb-2">Metric 2 (e.g., 3+ Years)</p>
-                                        <div className="flex gap-2">
-                                            <input type="number" value={localContent.about?.metrics?.[1] || 0} onChange={(e) => {
-                                                const m = [...(localContent.about?.metrics || [0,0,0])]; m[1]=parseInt(e.target.value||0);
-                                                trackChange({ ...localContent, about: { ...localContent.about, metrics: m } });
-                                            }} className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="e.g., 3" />
-                                            <input type="text" value={localContent.about?.metricLabels?.[1] || 'Years'} onChange={(e) => {
-                                                const l = [...(localContent.about?.metricLabels || ['Polished', 'Years', 'Views'])]; l[1]=e.target.value;
-                                                trackChange({ ...localContent, about: { ...localContent.about, metricLabels: l } });
-                                            }} className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="Label" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 mb-2">Metric 3 (e.g., 50M+ Views)</p>
-                                        <div className="flex gap-2">
-                                            <input type="number" value={localContent.about?.metrics?.[2] || 0} onChange={(e) => {
-                                                const m = [...(localContent.about?.metrics || [0,0,0])]; m[2]=parseInt(e.target.value||0);
-                                                trackChange({ ...localContent, about: { ...localContent.about, metrics: m } });
-                                            }} className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="e.g., 50" />
-                                            <input type="text" value={localContent.about?.metricLabels?.[2] || 'Views'} onChange={(e) => {
-                                                const l = [...(localContent.about?.metricLabels || ['Polished', 'Years', 'Views'])]; l[2]=e.target.value;
-                                                trackChange({ ...localContent, about: { ...localContent.about, metricLabels: l } });
-                                            }} className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white" placeholder="Label" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-
-                {activeTab === 'branding' && (
-                    <motion.div key="branding" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
-                            <h3 className="text-lg font-bold text-white mb-4">Branding & Header Icon</h3>
-                            <p className="text-sm text-gray-400 mb-4">Upload an SVG logo; server will generate PNG/WebP variants for favicons and social preview.</p>
-                            <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 rounded-lg overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center">
-                                    {localContent.headerIcon ? <img src={localContent.headerIcon} alt="Icon" className="w-full h-full object-contain" /> : <div className="text-gray-500">No icon</div>}
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <button onClick={() => triggerUpload('headerIcon', null)} className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-bold">Upload SVG</button>
-                                    <p className="text-xs text-gray-500 mt-1">Accepted: SVG (recommended). PNG/WebP will also be created.</p>
-                                </div>
-                            </div>
-                            {localContent.headerIconVariants && (
-                                <div className="grid grid-cols-4 gap-3 mt-4">
-                                    {Object.entries(localContent.headerIconVariants).map(([k,v]) => (
-                                        <div key={k} className="bg-[#0a192f] p-2 rounded-lg text-center">
-                                            <img src={v} alt={k} className="mx-auto mb-2 w-12 h-12 object-contain" />
-                                            <p className="text-xs text-gray-400">{k}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     </motion.div>
                 )}

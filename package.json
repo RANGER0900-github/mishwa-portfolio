@@ -13,10 +13,12 @@
   "dependencies": {
     "@studio-freight/lenis": "^1.0.42",
     "@supabase/supabase-js": "^2.93.3",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^2.2.2",
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
     "d3-scale": "^4.0.2",
+    "dotenv": "^16.3.1",
     "express": "^5.2.1",
     "framer-motion": "^12.29.2",
     "lucide-react": "^0.563.0",
@@ -27,10 +29,10 @@
     "react-icons": "^5.5.0",
     "react-is": "^19.2.4",
     "react-router-dom": "^7.13.0",
-    "react-simple-maps": "^3.0.0",
+    "react-simple-maps": "^1.0.0",
     "recharts": "^3.7.0",
-    "tailwind-merge": "^3.4.0",
-    "tooltip": "^1.6.1"
+    "sharp": "^0.34.5",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -44,6 +46,6 @@
     "globals": "^15.6.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.1",
-    "vite": "^5.4.11"
+    "vite": "^7.3.1"
   }
 }

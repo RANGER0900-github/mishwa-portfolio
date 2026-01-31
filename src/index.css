@@ -43,7 +43,10 @@ html.lenis {
 }
 
 .lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
+  /* Prefer native overscroll-behavior when supported */
+  @supports (overscroll-behavior: contain) {
+    overscroll-behavior: contain;
+  }
 }
 
 .lenis.lenis-stopped {

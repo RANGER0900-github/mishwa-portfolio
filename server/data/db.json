@@ -1,7 +1,7 @@
 {
   "auth": {
     "username": "admin",
-    "password": "lodu@lalit"
+    "passwordHash": "$2a$10$yeJeAxihDh3lloeEF69tqu7kIQ5YYEIds3E4Fh52Afw2gVOKcUAsG"
   },
   "content": {
     "hero": {
@@ -25,21 +25,28 @@
         "category": "Beauty & Personal Care",
         "image": "https://i.ytimg.com/vi/aVLwDefz5pY/maxresdefault.jpg",
         "orientation": "portrait",
-        "link": "youtube.com"
+        "link": "google.com",
+        "textColor": "#00ffff",
+        "textPosition": {
+          "x": 50,
+          "y": 85
+        }
       },
       {
         "id": 102,
         "title": "Bali Villas",
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "textColor": "#ffffff"
       },
       {
         "id": 103,
         "title": "Summer Shades",
         "category": "Fashion & Apparel",
-        "image": "https://images.unsplash.com/photo-1572251863040-5a30a912bb01?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
+        "orientation": "portrait",
+        "textColor": "#ffffff"
       },
       {
         "id": 104,
@@ -154,6 +161,40 @@
         "orientation": "portrait"
       }
     ],
+    "about": {
+      "metrics": [
+        500,
+        3,
+        100000
+      ],
+      "metricLabels": [
+        "Polished",
+        "Years",
+        "Views"
+      ],
+      "text": "I am a creative video editor",
+      "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769861336541-528700f1.jfif"
+    },
+    "cinema": {
+      "title": "Long Form Works",
+      "subtitle": "Cinematic",
+      "items": [
+        {
+          "id": 1,
+          "title": "The Summit",
+          "category": "Documentary",
+          "description": "A journey to the highest peaks using cinematic drone shots.",
+          "image": "/images/cinematic_thumbnail_1.png"
+        },
+        {
+          "id": 2,
+          "title": "Velocity",
+          "category": "Commercial",
+          "description": "High-speed automotive commercial featuring dynamic ramping.",
+          "image": "https://i.postimg.cc/mg0LGwRL/da0c007b4bb5cd942a039d3eab55ef4f.jpg"
+        }
+      ]
+    },
     "reviews": [
       {
         "id": 1,
@@ -179,373 +220,83 @@
     ]
   },
   "analytics": {
-    "visits": [
-      {
-        "timestamp": "2026-01-30T12:25:29.185Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:25:39.287Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:26:40.047Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:27:40.709Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:29:45.222Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:32:18.944Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:34:36.588Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:34:55.252Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:34:55.289Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:07.111Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:18.155Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:19.857Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:23.545Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:34.179Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:42.592Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:35:51.353Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:38:26.737Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:38:34.985Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:38:36.022Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:38:41.132Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:40:23.166Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:45:36.154Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:45:38.272Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:46:30.044Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:46:38.036Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:51:27.764Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:51:42.312Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:51:42.383Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:51:50.450Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:51:55.269Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:53:04.541Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:53:24.955Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      },
-      {
-        "timestamp": "2026-01-30T12:53:36.000Z",
-        "ip": "::1",
-        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "country": "Unknown"
-      }
-    ],
+    "visits": [],
     "ip_logs": [],
+    "reelClicks": {
+      "101": 3
+    },
     "stats": {
-      "total_visitors": 1290,
-      "unique_visitors": 1,
-      "countries": {
-        "US": 400,
-        "IN": 300,
-        "UK": 150
-      },
+      "total_visitors": 0,
+      "unique_visitors": 0,
+      "countries": {},
       "devices": {
-        "mobile": 800,
-        "desktop": 440
+        "mobile": 0,
+        "desktop": 0
       }
     }
   },
   "notifications": [
     {
-      "id": "da8ed301-c89b-4320-95a9-e01a828716c5",
+      "id": "e66f4076-9ab1-41c1-9d09-ebba855033d1",
       "type": "info",
       "title": "Content Updated",
       "message": "Website content was modified via CMS",
       "ip": null,
-      "timestamp": "2026-01-30T15:17:29.297Z",
+      "timestamp": "2026-01-31T12:13:29.788Z",
       "read": false
     },
     {
-      "id": "b6a8bf50-cc0a-4620-bf2a-3dfd9994c254",
-      "type": "security",
-      "title": "Login Success",
-      "message": "Admin login from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:17:20.106Z",
+      "id": "4eefb98b-56b5-42bb-84e4-72bcc65d6ff2",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:09:08.306Z",
       "read": false
     },
     {
-      "id": "03c3ac22-2a91-4443-b1cc-787d51915b1a",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .reviews.0.text from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:09:01.251Z",
+      "id": "ebf2e33f-dc76-46c7-afbb-46a66737e14c",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:09:00.216Z",
       "read": false
     },
     {
-      "id": "457f892e-5736-46ed-8a9b-d94b4b3ad6ad",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:08:56.119Z",
+      "id": "f62bdea9-3cba-4a32-914f-659f0eb88878",
+      "type": "info",
+      "title": "Image Uploaded",
+      "message": "New image uploaded: 1769861336541-528700f1.jfif",
+      "ip": null,
+      "timestamp": "2026-01-31T12:08:56.870Z",
       "read": false
     },
     {
-      "id": "7859ebd1-0785-4a41-a768-8322e52bbe4c",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .reviews.0.text from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:06:05.798Z",
+      "id": "e8d647fb-0ca4-438c-89a1-fbdf1056bbec",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:06:39.639Z",
       "read": false
     },
     {
-      "id": "c7fb6265-3180-4da7-9b6e-34703ffd719c",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:06:00.920Z",
+      "id": "993193f4-657a-4023-8377-e8c423892bfe",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:04:13.657Z",
       "read": false
     },
     {
-      "id": "048fbe70-60d5-45af-9fca-9fe5bf89f38f",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .reviews.0.text from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:04:41.700Z",
-      "read": false
-    },
-    {
-      "id": "3e28ae1b-da90-4387-ad15-6abd7798e409",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:04:37.789Z",
-      "read": false
-    },
-    {
-      "id": "9c84e197-4756-4f5d-92b3-120d0a937d8a",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:04:20.566Z",
-      "read": false
-    },
-    {
-      "id": "21faa201-7eca-4157-bc7c-25ba126aec68",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:00:30.117Z",
-      "read": false
-    },
-    {
-      "id": "51f80712-01ca-4775-86d8-d7603c8f47ab",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .reviews.0.text from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:00:25.199Z",
-      "read": false
-    },
-    {
-      "id": "d54727f2-a9ce-4865-8c40-59c4fce0a6fe",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:00:21.402Z",
-      "read": false
-    },
-    {
-      "id": "d3765a9f-3fad-4d6c-aa4c-f68cb4ef96b4",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:00:17.530Z",
-      "read": false
-    },
-    {
-      "id": "549398ea-2584-4cbd-9385-eb3e511425d4",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:00:13.035Z",
-      "read": false
-    },
-    {
-      "id": "8507772b-a400-4650-9ba4-ad1e07a23f16",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T15:00:07.148Z",
-      "read": false
-    },
-    {
-      "id": "ccd58b3b-8120-4ffe-907e-775a68ba87ae",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T14:56:48.910Z",
-      "read": false
-    },
-    {
-      "id": "f39c6d93-2db1-401e-be46-01edd6e8b663",
-      "type": "attack_blocked",
-      "title": "Malicious Input Blocked",
-      "message": "Suspicious pattern detected in .userAgent from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-01-30T14:56:14.962Z",
+      "id": "7517b569-b036-4f3c-88fd-09fafdff10d4",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:03:55.964Z",
       "read": false
     }
   ]

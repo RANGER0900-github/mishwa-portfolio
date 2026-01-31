@@ -11,6 +11,11 @@ const AllReels = () => {
     const { content } = useContent();
     const [activeCategory, setActiveCategory] = useState("All");
 
+    // Ensure the archive page always opens at the top
+    useEffect(() => {
+        try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { window.scrollTo(0, 0); }
+    }, []);
+
     if (!content) return null;
     const allReels = content.projects || [];
     const { social } = content;
@@ -75,7 +80,16 @@ const AllReels = () => {
                                 transition={{ duration: 0.4 }}
                                 key={reel.id}
                                 onClick={() => {
-                                    if (reel.link) window.open(formatExternalLink(reel.link), '_blank');
+                                    if (reel.link) {
+                                        try {
+                                            fetch('/api/track/reel', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ reelId: reel.id })
+                                            }).catch(() => { });
+                                        } catch (e) { }
+                                        window.open(formatExternalLink(reel.link), '_blank');
+                                    }
                                 }}
                                 className={`group relative break-inside-avoid rounded-3xl overflow-hidden cursor-pointer border border-white/5 bg-card-bg mb-8`}
                             >

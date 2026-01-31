@@ -1,6 +1,7 @@
 import Hero from '../components/Hero';
 import Work from '../components/Work';
 import Cinema from '../components/Cinema';
+import About from '../components/About';
 import Reviews from '../components/Reviews';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -12,6 +13,7 @@ const Home = () => {
             <Hero />
             <Work />
             <Cinema />
+            <About />
             <Reviews />
             <Footer />
         </div>

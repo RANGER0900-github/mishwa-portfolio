@@ -9,6 +9,20 @@ const Work = () => {
     if (!content) return null;
     const projects = (content.projects || []).slice(0, 4); // Show only first 4 projects
 
+    const handleProjectClick = (project) => {
+        if (project.link) {
+            try {
+                // fire-and-forget tracking for reel click
+                fetch('/api/track/reel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reelId: project.id })
+                }).catch(() => { });
+            } catch (e) { }
+            window.open(formatExternalLink(project.link), '_blank');
+        }
+    };
+
     return (
         <section id="work" className="py-32 px-6 relative z-10">
             <div className="max-w-7xl mx-auto">
@@ -43,10 +57,7 @@ const Work = () => {
                             transition={{ duration: 0.5, delay: index * 0.1 }}
                             viewport={{ once: true }}
                             whileHover={{ y: -10 }}
-                            onClick={() => {
-                                if (project.link) window.open(formatExternalLink(project.link), '_blank');
-                            }}
-                            className="group relative aspect-[9/16] bg-card-bg rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
+                            className="group relative aspect-[9/16] bg-card-bg rounded-2xl overflow-hidden border border-white/5"
                         >
                             <img
                                 src={project.image}
@@ -56,7 +67,7 @@ const Work = () => {
                             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent"></div>
 
                             <div
-                                className="absolute w-full z-10 transition-transform duration-300"
+                                className="absolute w-full z-10 transition-transform duration-300 pointer-events-none"
                                 style={{
                                     left: project.textPosition ? `${project.textPosition.x}%` : '50%',
                                     top: project.textPosition ? `${project.textPosition.y}%` : '85%',
@@ -78,6 +89,17 @@ const Work = () => {
                                 </span>
                                 <h3 className="text-xl font-bold leading-tight mb-2 drop-shadow-lg">{project.title}</h3>
                             </div>
+
+                            {/* Arrow Icon - Click to navigate */}
+                            <button
+                                onClick={() => handleProjectClick(project)}
+                                className="absolute bottom-6 right-6 z-20 p-3 rounded-full bg-white/10 border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-secondary hover:text-black hover:scale-110"
+                                aria-label="Open project"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                                </svg>
+                            </button>
 
                             {/* Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">

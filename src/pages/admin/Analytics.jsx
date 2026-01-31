@@ -7,7 +7,7 @@ import {
     Map, Laptop, Smartphone, RefreshCw, Copy, Check,
     Shield, ShieldOff, Wifi, Radio, Clock, Eye, Users, Globe,
     TrendingUp, Film, Maximize2, X, MapPin, Download, FileJson, FileSpreadsheet,
-    ZoomIn, ZoomOut, RotateCcw
+    ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps';
@@ -24,17 +24,19 @@ const Analytics = () => {
     const [mapZoom, setMapZoom] = useState(1);
     const [mapCenter, setMapCenter] = useState([0, 20]);
     const [copiedIP, setCopiedIP] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(50);
 
     const fetchData = useCallback(async () => {
         try {
-            const res = await fetch('/api/analytics');
+            const res = await fetch(`/api/analytics?page=${currentPage}&limit=${pageSize}`);
             const apiData = await res.json();
             setData(apiData);
             setLoading(false);
         } catch (err) {
             console.error("Analytics Error:", err);
         }
-    }, []);
+    }, [currentPage, pageSize]);
 
     useEffect(() => {
         fetchData();
@@ -371,7 +373,12 @@ const Analytics = () => {
                     </div>
                 </div>
 
-                <div className="h-[450px] bg-black/20 rounded-2xl relative overflow-hidden group">
+                <div className="h-[450px] bg-black/20 rounded-2xl relative overflow-hidden group" onWheel={(e) => {
+                    // allow ctrl/shift wheel for zoom
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+                    setMapZoom(prev => Math.min(8, Math.max(1, +(prev + delta).toFixed(2))));
+                }}>
                     <ComposableMap projectionConfig={{ scale: 190 }}>
                         <ZoomableGroup
                             zoom={mapZoom}
