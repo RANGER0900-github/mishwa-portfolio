@@ -165,7 +165,7 @@
       "metrics": [
         500,
         3,
-        100000
+        1200000
       ],
       "metricLabels": [
         "Polished",
@@ -173,7 +173,7 @@
         "Views"
       ],
       "text": "I am a creative video editor",
-      "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769861336541-528700f1.jfif"
+      "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769862239290-5394375f.webp"
     },
     "cinema": {
       "title": "Long Form Works",
@@ -236,6 +236,33 @@
     }
   },
   "notifications": [
+    {
+      "id": "6e88de36-3c71-4238-9d60-67c60fbda01e",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:24:08.555Z",
+      "read": false
+    },
+    {
+      "id": "266edc1b-8606-4df1-b2ed-f8aa47cf1b81",
+      "type": "info",
+      "title": "Content Updated",
+      "message": "Website content was modified via CMS",
+      "ip": null,
+      "timestamp": "2026-01-31T12:24:02.355Z",
+      "read": false
+    },
+    {
+      "id": "3fbc2f7b-9741-4d06-b053-15ebb05c9bdb",
+      "type": "info",
+      "title": "Image Uploaded",
+      "message": "New image uploaded: 1769862239290-5394375f.webp",
+      "ip": null,
+      "timestamp": "2026-01-31T12:23:59.970Z",
+      "read": false
+    },
     {
       "id": "e66f4076-9ab1-41c1-9d09-ebba855033d1",
       "type": "info",
