@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Film, Users, Settings, LogOut, Bell, Menu, X } from 'lucide-react';
+import { adminFetch } from '../utils/adminApi';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
@@ -12,36 +13,21 @@ const AdminLayout = () => {
 
     useEffect(() => {
         const validateToken = async () => {
-            const token = localStorage.getItem('adminToken');
-            
-            if (!token) {
-                navigate('/admin/login');
-                setIsValidating(false);
-                return;
-            }
-            
             try {
-                // Validate token with server
-                const response = await fetch('/api/validate-token', {
+                const response = await adminFetch('/api/validate-token', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
-                
                 if (!response.ok) {
-                    // Token is invalid, remove it and redirect to login
-                    localStorage.removeItem('adminToken');
                     navigate('/admin/login');
                 } else {
-                    // Token is valid, allow access
                     setIsValidating(false);
                 }
             } catch (error) {
                 console.error('Token validation failed:', error);
-                localStorage.removeItem('adminToken');
                 navigate('/admin/login');
+            } finally {
+                setIsValidating(false);
             }
         };
         
@@ -63,18 +49,11 @@ const AdminLayout = () => {
     }, [location.pathname]);
 
     const handleLogout = async () => {
-        const token = localStorage.getItem('adminToken');
-        if (token) {
-            try {
-                await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-            } catch (error) {
-                // Ignore logout API failures and continue client-side cleanup.
-            }
+        try {
+            await adminFetch('/api/logout', { method: 'POST' });
+        } catch (error) {
+            // Ignore logout API failures and continue redirect.
         }
-        localStorage.removeItem('adminToken');
         navigate('/admin/login');
     };
 

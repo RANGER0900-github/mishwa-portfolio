@@ -9,6 +9,7 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { Link } from 'react-router-dom';
+import { adminFetch } from '../../utils/adminApi';
 
 const Dashboard = () => {
     const [data, setData] = useState(null);
@@ -22,15 +23,13 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem('adminToken');
-            const res = await fetch('/api/analytics', {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
+            const res = await adminFetch('/api/analytics');
             const apiData = await res.json();
             setData(apiData);
-            setLoading(false);
         } catch (err) {
             console.error("Dashboard Error:", err);
+        } finally {
+            setLoading(false);
         }
     };
 

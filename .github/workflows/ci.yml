@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Start Server
+        run: |
+          npm run server > server.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Wait For Health
+        run: |
+          for i in {1..25}; do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/api/health
+
+      - name: Smoke API
+        run: npm run smoke:api
+
+      - name: Stop Server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill "$(cat server.pid)" || true
+          fi

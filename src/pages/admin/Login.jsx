@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
+import { adminJsonFetch } from '../../utils/adminApi';
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -15,19 +16,14 @@ const Login = () => {
         setError('');
 
         try {
-            const res = await fetch('/api/login', {
+            const { response, data } = await adminJsonFetch('/api/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: { username, password }
             });
-
-            const data = await res.json();
-
-            if (data.success) {
-                localStorage.setItem('adminToken', data.token);
+            if (response.ok && data?.success) {
                 navigate('/admin');
             } else {
-                setError(data.message || 'Invalid Credentials');
+                setError(data?.message || 'Invalid credentials');
             }
         } catch (err) {
             setError('Login Failed. Check if server is running on port 3000.');

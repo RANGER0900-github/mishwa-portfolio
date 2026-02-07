@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Trash2, Shield, AlertTriangle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { adminFetch } from '../../utils/adminApi';
 
 const Settings = () => {
     const [passwords, setPasswords] = useState({
@@ -10,14 +11,29 @@ const Settings = () => {
     });
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
     const [isClearingAnalytics, setIsClearingAnalytics] = useState(false);
+    const [analyticsCount, setAnalyticsCount] = useState(0);
+    const [countLoading, setCountLoading] = useState(true);
 
-    const getAuthHeaders = (includeJson = false) => {
-        const token = localStorage.getItem('adminToken');
-        return {
-            ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-        };
+    const fetchAnalyticsCount = async () => {
+        setCountLoading(true);
+        try {
+            const res = await adminFetch('/api/settings/analytics-count');
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setAnalyticsCount(Number(data.total || 0));
+                return;
+            }
+            setAnalyticsCount(0);
+        } catch {
+            setAnalyticsCount(0);
+        } finally {
+            setCountLoading(false);
+        }
     };
+
+    useEffect(() => {
+        fetchAnalyticsCount();
+    }, []);
 
     const handlePasswordChange = async (e) => {
         e.preventDefault();
@@ -34,9 +50,9 @@ const Settings = () => {
         setIsUpdatingPassword(true);
 
         try {
-            const res = await fetch('/api/settings/password', {
+            const res = await adminFetch('/api/settings/password', {
                 method: 'POST',
-                headers: getAuthHeaders(true),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     username: 'admin',
                     newPassword: passwords.new
@@ -59,26 +75,25 @@ const Settings = () => {
     };
 
     const handleClearAnalytics = async () => {
-        if (!window.confirm("Are you sure? This effectively deletes all visitor history.")) return;
+        if (!window.confirm(`Delete ${analyticsCount} analytics records? This cannot be undone.`)) return;
 
         setIsClearingAnalytics(true);
 
         try {
-            const res = await fetch('/api/settings/clear-analytics', {
-                method: 'POST',
-                headers: getAuthHeaders()
+            const res = await adminFetch('/api/settings/clear-analytics', {
+                method: 'POST'
             });
             const data = await res.json();
 
             if (res.status === 401) {
                 toast.error('Session expired. Please login again.');
-                localStorage.removeItem('adminToken');
                 window.location.href = '/admin/login';
                 return;
             }
 
             if (res.ok && data.success) {
                 toast.success(data.message || 'Analytics data cleared.');
+                fetchAnalyticsCount();
                 return;
             }
 
@@ -173,11 +188,13 @@ const Settings = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h3 className="text-white font-bold">Clear Analytics Data</h3>
-                        <p className="text-sm text-gray-400">Reset all visitor logs and counters to zero.</p>
+                        <p className="text-sm text-gray-400">
+                            {countLoading ? 'Checking data size...' : `This will remove ${analyticsCount} analytics records.`}
+                        </p>
                     </div>
                     <button
                         onClick={handleClearAnalytics}
-                        disabled={isClearingAnalytics}
+                        disabled={isClearingAnalytics || countLoading}
                         className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all disabled:opacity-60"
                     >
                         <Trash2 size={18} />

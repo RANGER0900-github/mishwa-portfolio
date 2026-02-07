@@ -10,7 +10,7 @@ import Footer from '../components/Footer';
 const AllReels = () => {
     const { content } = useContent();
     const [activeCategory, setActiveCategory] = useState("All");
-    const location = useLocation(); // Add this line
+    const location = useLocation();
 
     // Ensure the archive page always opens at the top
     useEffect(() => {
@@ -20,7 +20,7 @@ const AllReels = () => {
             // Fallback for when lenis is not available
             window.scrollTo(0, 0);
         }
-    }, [location]); // Change dependency to [location]
+    }, [location.pathname]);
 
     const allReels = content?.projects || [];
 

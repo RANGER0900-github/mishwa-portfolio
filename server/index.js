@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createRedisClient } from 'redis';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
@@ -73,39 +75,46 @@ const sanitizeString = (str, maxLength = 500) => {
     return str.substring(0, maxLength).trim();
 };
 
-const createAdminToken = () => {
-    const token = 'admin-token-' + crypto.randomBytes(24).toString('hex');
-    adminSessions.set(token, Date.now() + ADMIN_TOKEN_TTL_MS);
-    return token;
-};
-
-const validateStoredToken = (token) => {
-    if (!token || typeof token !== 'string') return false;
-    if (!token.startsWith('admin-token-') || token.length < 28) return false;
-
-    const expiresAt = adminSessions.get(token);
-    if (!expiresAt) return false;
-    if (expiresAt < Date.now()) {
-        adminSessions.delete(token);
-        return false;
-    }
-    return true;
-};
-
-const purgeExpiredAdminSessions = () => {
-    const now = Date.now();
-    for (const [token, expiresAt] of adminSessions.entries()) {
-        if (expiresAt < now) adminSessions.delete(token);
-    }
-};
-
-// Rate limiting store
-const rateLimitStore = new Map();
+// Storage configuration (Redis + in-memory fallback)
+const REDIS_URL = process.env.REDIS_URL || '';
+const SESSION_COOKIE_NAME = process.env.ADMIN_SESSION_COOKIE || 'admin_session';
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.COOKIE_SECRET || 'dev-session-secret-change-me';
+const SESSION_COOKIE_SECURE = (process.env.SESSION_COOKIE_SECURE || '').toLowerCase() === 'true' || process.env.NODE_ENV === 'production';
+const CONTENT_HISTORY_LIMIT = Math.max(10, parseInt(process.env.CONTENT_HISTORY_LIMIT || '40', 10));
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const BLOCKED_IPS = new Set();
-const ADMIN_TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
-const adminSessions = new Map();
+const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const LOGIN_LOCK_WINDOW_MS = 15 * 60 * 1000; // 15 min
+const LOGIN_LOCK_DURATION_MS = 15 * 60 * 1000; // 15 min
+const LOGIN_LOCK_THRESHOLD = 5;
+
+const memoryRateLimitStore = new Map();
+const memorySessionStore = new Map();
+const memoryLoginAttempts = new Map();
+let redisClient = null;
+let redisConnected = false;
 let analyticsCache = { timestamp: 0, key: '', visits: [] };
+
+if (REDIS_URL) {
+    redisClient = createRedisClient({ url: REDIS_URL });
+    redisClient.on('error', (error) => {
+        redisConnected = false;
+        console.warn('Redis error:', error.message);
+    });
+    redisClient.on('ready', () => {
+        redisConnected = true;
+        console.log('Redis connected.');
+    });
+    redisClient.connect().catch((error) => {
+        redisConnected = false;
+        console.warn('Redis connection failed, using in-memory fallback:', error.message);
+    });
+}
+
+const getRedis = () => (redisConnected && redisClient ? redisClient : null);
+const getRateLimitKey = (key) => `rl:${key}`;
+const getSessionKey = (sessionId) => `session:${sessionId}`;
+const getLoginAttemptKey = (key) => `login_attempt:${key}`;
 
 const RATE_LIMIT_RULES = [
     { name: 'login', match: (req) => req.path === '/api/login', max: 10 },
@@ -141,8 +150,107 @@ app.use((req, res, next) => {
     next();
 });
 
+const appendRateLimitHit = async (key, windowMs) => {
+    const now = Date.now();
+    const windowStart = now - windowMs;
+    const redis = getRedis();
+    if (redis) {
+        const redisKey = getRateLimitKey(key);
+        await redis.zRemRangeByScore(redisKey, 0, windowStart);
+        await redis.zAdd(redisKey, [{ score: now, value: `${now}-${crypto.randomUUID()}` }]);
+        await redis.pExpire(redisKey, windowMs + 5000);
+        return redis.zCard(redisKey);
+    }
+
+    const requests = (memoryRateLimitStore.get(key) || []).filter((time) => time > windowStart);
+    requests.push(now);
+    memoryRateLimitStore.set(key, requests);
+    return requests.length;
+};
+
+const createSession = async (payload = {}) => {
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + ADMIN_SESSION_TTL_MS;
+    const sessionData = { ...payload, expiresAt };
+    const redis = getRedis();
+
+    if (redis) {
+        await redis.set(getSessionKey(sessionId), JSON.stringify(sessionData), { PX: ADMIN_SESSION_TTL_MS });
+    } else {
+        memorySessionStore.set(sessionId, sessionData);
+    }
+
+    return { sessionId, expiresAt };
+};
+
+const getSessionData = async (sessionId) => {
+    if (!sessionId) return null;
+    const redis = getRedis();
+    if (redis) {
+        const raw = await redis.get(getSessionKey(sessionId));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.expiresAt || parsed.expiresAt < Date.now()) {
+            await redis.del(getSessionKey(sessionId));
+            return null;
+        }
+        return parsed;
+    }
+
+    const local = memorySessionStore.get(sessionId);
+    if (!local) return null;
+    if (!local.expiresAt || local.expiresAt < Date.now()) {
+        memorySessionStore.delete(sessionId);
+        return null;
+    }
+    return local;
+};
+
+const deleteSession = async (sessionId) => {
+    if (!sessionId) return;
+    const redis = getRedis();
+    if (redis) {
+        await redis.del(getSessionKey(sessionId));
+        return;
+    }
+    memorySessionStore.delete(sessionId);
+};
+
+const getLoginAttemptState = async (key) => {
+    const redis = getRedis();
+    if (redis) {
+        const raw = await redis.get(getLoginAttemptKey(key));
+        return raw ? JSON.parse(raw) : null;
+    }
+    return memoryLoginAttempts.get(key) || null;
+};
+
+const setLoginAttemptState = async (key, state) => {
+    const redis = getRedis();
+    const ttlMs = LOGIN_LOCK_WINDOW_MS + LOGIN_LOCK_DURATION_MS;
+    if (redis) {
+        await redis.set(getLoginAttemptKey(key), JSON.stringify(state), { PX: ttlMs });
+        return;
+    }
+    memoryLoginAttempts.set(key, state);
+};
+
+const clearLoginAttemptState = async (key) => {
+    const redis = getRedis();
+    if (redis) {
+        await redis.del(getLoginAttemptKey(key));
+        return;
+    }
+    memoryLoginAttempts.delete(key);
+};
+
+const getLoginBackoffMs = (failedAttempts) => {
+    if (failedAttempts <= 1) return 0;
+    return Math.min(10000, (failedAttempts - 1) * 1000);
+};
+
 // Rate limiter
-const rateLimiter = (req, res, next) => {
+const rateLimiter = async (req, res, next) => {
     const ip = getClientIP(req);
 
     if (BLOCKED_IPS.has(ip)) {
@@ -152,13 +260,15 @@ const rateLimiter = (req, res, next) => {
 
     const matchedRule = RATE_LIMIT_RULES.find((rule) => rule.match(req)) || RATE_LIMIT_RULES[RATE_LIMIT_RULES.length - 1];
     const key = `${ip}:${matchedRule.name}`;
-    const now = Date.now();
-    const windowStart = now - RATE_LIMIT_WINDOW;
-    const requests = (rateLimitStore.get(key) || []).filter((time) => time > windowStart);
-    requests.push(now);
-    rateLimitStore.set(key, requests);
+    let requestCount = 0;
+    try {
+        requestCount = await appendRateLimitHit(key, RATE_LIMIT_WINDOW);
+    } catch (error) {
+        console.warn('Rate limiter storage failed, request allowed:', error.message);
+        return next();
+    }
 
-    if (requests.length > matchedRule.max) {
+    if (requestCount > matchedRule.max) {
         logNotification('attack_blocked', 'Rate Limit Exceeded', `IP ${ip} exceeded rate limit`, ip);
         return res.status(429).json({ error: 'Too many requests. Please slow down.' });
     }
@@ -166,19 +276,13 @@ const rateLimiter = (req, res, next) => {
     next();
 };
 
-// Check if request is authenticated (has admin token)
-const isAuthenticated = (req) => {
-    const token = req.headers.authorization?.split(' ')[1] || req.query.token;
-    return validateStoredToken(token);
-};
-
 // Input sanitizer - Smart version that allows common content
 const sanitizeInput = (req, res, next) => {
     const ip = getClientIP(req);
     
-    // Skip sanitization for authenticated admin requests and for /api/track endpoints
-    const skipEndpoints = ['/api/track', '/api/track/heartbeat', '/api/track/reel', '/api/login'];
-    if (isAuthenticated(req) || skipEndpoints.includes(req.path)) {
+    // Skip sanitization for endpoints that intentionally accept rich/admin payloads.
+    const skipPrefixes = ['/api/track', '/api/login', '/api/content', '/api/upload', '/api/settings', '/api/notifications', '/api/validate-token', '/api/logout', '/api/analytics'];
+    if (skipPrefixes.some((prefix) => req.path.startsWith(prefix))) {
         return next();
     }
     
@@ -241,6 +345,7 @@ app.use(cors({
     credentials: true
 }));
 
+app.use(cookieParser(SESSION_SECRET));
 app.use(bodyParser.json({ limit: '12mb' }));
 app.use(rateLimiter);
 app.use(sanitizeInput);
@@ -255,7 +360,13 @@ const readDB = () => {
     try {
         return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
     } catch (err) {
-        return { auth: {}, content: {}, analytics: { visits: [], reelClicks: {}, clearedAt: null }, notifications: [] };
+        return {
+            auth: {},
+            content: {},
+            contentHistory: [],
+            analytics: { visits: [], reelClicks: {}, sessionDurations: {}, clearedAt: null },
+            notifications: []
+        };
     }
 };
 const writeDB = (data) => fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
@@ -267,7 +378,9 @@ const initializeDB = () => {
     if (!db.analytics) db.analytics = { visits: [], reelClicks: {} };
     if (!db.analytics.reelClicks) db.analytics.reelClicks = {};
     if (!db.analytics.visits) db.analytics.visits = [];
+    if (!db.analytics.sessionDurations || typeof db.analytics.sessionDurations !== 'object') db.analytics.sessionDurations = {};
     if (!db.analytics.clearedAt) db.analytics.clearedAt = null;
+    if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
     writeDB(db);
 };
 initializeDB();
@@ -297,6 +410,11 @@ const logNotification = (type, title, message, ip = null) => {
     } catch (err) {
         console.error('Failed to log notification:', err);
     }
+};
+
+const reportServerError = (title, error, req = null) => {
+    const message = error instanceof Error ? `${error.message}${error.stack ? ` | ${error.stack.split('\n')[1]?.trim() || ''}` : ''}` : String(error);
+    logNotification('error', title, sanitizeString(message, 450), req ? getClientIP(req) : null);
 };
 
 // Get real client IP
@@ -395,6 +513,23 @@ const getDailyKeys = (count = 7) => {
     return keys;
 };
 
+const parseDateParam = (value, { endOfDay = false } = {}) => {
+    if (!value || typeof value !== 'string') return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    if (value.length <= 10) {
+        if (endOfDay) parsed.setUTCHours(23, 59, 59, 999);
+        else parsed.setUTCHours(0, 0, 0, 0);
+    }
+    return parsed.toISOString();
+};
+
+const applySessionDurationOverrides = (visits, overrides = {}) => visits.map((visit) => {
+    const override = overrides[visit.id];
+    if (typeof override !== 'number') return visit;
+    return { ...visit, sessionDuration: Math.max(0, Number(override) || 0) };
+});
+
 const buildAnalyticsStats = (visits) => {
     const totalVisitors = visits.length;
     const uniqueVisitors = new Set(visits.map((visit) => visit.ip).filter(Boolean)).size;
@@ -445,10 +580,10 @@ const buildAnalyticsStats = (visits) => {
     };
 };
 
-const getCacheKey = (clearedAt) => clearedAt || 'all';
+const getCacheKey = ({ clearedAt, from, to }) => `${clearedAt || 'all'}:${from || 'none'}:${to || 'none'}`;
 
-const fetchSupabaseVisits = async (clearedAt) => {
-    const cacheKey = getCacheKey(clearedAt);
+const fetchSupabaseVisits = async ({ clearedAt, from, to }) => {
+    const cacheKey = getCacheKey({ clearedAt, from, to });
     if (analyticsCache.key === cacheKey && Date.now() - analyticsCache.timestamp < 15000) {
         return analyticsCache.visits;
     }
@@ -465,9 +600,9 @@ const fetchSupabaseVisits = async (clearedAt) => {
             .order('created_at', { ascending: false })
             .range(offset, offset + batchSize - 1);
 
-        if (clearedAt) {
-            query = query.gte('created_at', clearedAt);
-        }
+        if (clearedAt) query = query.gte('created_at', clearedAt);
+        if (from) query = query.gte('created_at', from);
+        if (to) query = query.lte('created_at', to);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -485,24 +620,57 @@ const fetchSupabaseVisits = async (clearedAt) => {
 };
 
 // =====================
-// TOKEN VALIDATION MIDDLEWARE
+// AUTH SESSION VALIDATION
 // =====================
 
-// Validate admin token
-const validateAdminToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1] || req.body?.token || req.query?.token;
-    
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'No token provided' });
+const getSessionIdFromRequest = (req) =>
+    req.signedCookies?.[SESSION_COOKIE_NAME]
+    || req.cookies?.[SESSION_COOKIE_NAME]
+    || req.headers.authorization?.split(' ')[1]
+    || req.body?.token
+    || req.query?.token;
+
+const setSessionCookie = (res, sessionId) => {
+    res.cookie(SESSION_COOKIE_NAME, sessionId, {
+        httpOnly: true,
+        signed: true,
+        secure: SESSION_COOKIE_SECURE,
+        sameSite: 'lax',
+        maxAge: ADMIN_SESSION_TTL_MS,
+        path: '/'
+    });
+};
+
+const clearSessionCookie = (res) => {
+    res.clearCookie(SESSION_COOKIE_NAME, {
+        httpOnly: true,
+        signed: true,
+        secure: SESSION_COOKIE_SECURE,
+        sameSite: 'lax',
+        path: '/'
+    });
+};
+
+const validateAdminToken = async (req, res, next) => {
+    try {
+        const sessionId = getSessionIdFromRequest(req);
+        if (!sessionId) {
+            return res.status(401).json({ success: false, message: 'No active session' });
+        }
+
+        const session = await getSessionData(sessionId);
+        if (!session) {
+            clearSessionCookie(res);
+            return res.status(401).json({ success: false, message: 'Session expired or invalid' });
+        }
+
+        req.adminSessionId = sessionId;
+        req.adminSession = session;
+        next();
+    } catch (error) {
+        reportServerError('Session Validation Error', error, req);
+        return res.status(500).json({ success: false, message: 'Session validation failed' });
     }
-    
-    if (!validateStoredToken(token)) {
-        return res.status(401).json({ success: false, message: 'Session expired or invalid token' });
-    }
-    
-    // Store validated token in request
-    req.adminToken = token;
-    next();
 };
 
 // =====================
@@ -515,7 +683,9 @@ app.get('/api/health', (_req, res) => {
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
         hasDist: HAS_DIST,
-        hasSupabaseKey: Boolean(supabaseKey)
+        hasSupabaseKey: Boolean(supabaseKey),
+        redisConnected,
+        authMode: 'cookie-session'
     });
 });
 
@@ -525,7 +695,7 @@ app.get('/api/content', (req, res) => {
         const db = readDB();
         res.json(db.content);
     } catch (error) {
-        logNotification('error', 'Content Read Error', error.message);
+        reportServerError('Content Read Error', error, req);
         res.status(500).json({ error: 'Failed to read content' });
     }
 });
@@ -586,6 +756,7 @@ app.post('/api/content', validateAdminToken, (req, res) => {
     try {
         const db = readDB();
         const content = req.body;
+        const ip = getClientIP(req);
 
         // Validate content structure
         if (typeof content !== 'object' || content === null) {
@@ -626,14 +797,77 @@ app.post('/api/content', validateAdminToken, (req, res) => {
             }
         }
 
+        const previousContent = JSON.parse(JSON.stringify(db.content || {}));
+        if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
+        db.contentHistory.unshift({
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            action: 'content_update',
+            actorIp: ip,
+            content: previousContent
+        });
+        if (db.contentHistory.length > CONTENT_HISTORY_LIMIT) {
+            db.contentHistory = db.contentHistory.slice(0, CONTENT_HISTORY_LIMIT);
+        }
+
         db.content = { ...db.content, ...content };
         writeDB(db);
-        logNotification('info', 'Content Updated', 'Website content was modified via CMS');
+        logNotification('info', 'Content Updated', `Website content was modified via CMS from ${ip}`, ip);
         res.json({ success: true, content: db.content });
     } catch (error) {
         console.error('Content update error:', error);
-        logNotification('error', 'Content Update Error', error.message);
+        reportServerError('Content Update Error', error, req);
         res.status(500).json({ error: 'Failed to update content' });
+    }
+});
+
+app.get('/api/content/history', validateAdminToken, (req, res) => {
+    try {
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '20', 10)));
+        const db = readDB();
+        const history = (db.contentHistory || []).slice(0, limit).map((entry) => ({
+            id: entry.id,
+            timestamp: entry.timestamp,
+            action: entry.action,
+            actorIp: entry.actorIp,
+            projectCount: Array.isArray(entry.content?.projects) ? entry.content.projects.length : 0,
+            reviewCount: Array.isArray(entry.content?.reviews) ? entry.content.reviews.length : 0
+        }));
+
+        res.json({ history });
+    } catch (error) {
+        reportServerError('Content History Read Error', error, req);
+        res.status(500).json({ error: 'Failed to fetch content history' });
+    }
+});
+
+app.post('/api/content/history/:id/rollback', validateAdminToken, (req, res) => {
+    try {
+        const db = readDB();
+        const target = (db.contentHistory || []).find((entry) => entry.id === req.params.id);
+        if (!target || !target.content) {
+            return res.status(404).json({ error: 'Version not found' });
+        }
+
+        if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
+        db.contentHistory.unshift({
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            action: `rollback_backup:${req.params.id}`,
+            actorIp: getClientIP(req),
+            content: JSON.parse(JSON.stringify(db.content || {}))
+        });
+        if (db.contentHistory.length > CONTENT_HISTORY_LIMIT) {
+            db.contentHistory = db.contentHistory.slice(0, CONTENT_HISTORY_LIMIT);
+        }
+
+        db.content = JSON.parse(JSON.stringify(target.content));
+        writeDB(db);
+        logNotification('warning', 'Content Rolled Back', `Content reverted to snapshot ${req.params.id}`, getClientIP(req));
+        res.json({ success: true, content: db.content });
+    } catch (error) {
+        reportServerError('Content Rollback Error', error, req);
+        res.status(500).json({ error: 'Failed to rollback content version' });
     }
 });
 
@@ -694,7 +928,7 @@ app.post('/api/upload', validateAdminToken, async (req, res) => {
         res.json({ success: true, url: urlData.publicUrl, filename: uniqueName });
     } catch (error) {
         console.error('Upload error:', error);
-        logNotification('error', 'Upload Error', error.message);
+        reportServerError('Upload Error', error, req);
         res.status(500).json({ error: 'Upload failed' });
     }
 });
@@ -704,11 +938,23 @@ app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const ip = getClientIP(req);
+        const loginKey = `${sanitizeString(String(username || ''), 60).toLowerCase()}:${ip}`;
 
         // Validate input
         if (!validateUsername(username) || !validatePassword(password)) {
             logNotification('warning', 'Invalid Login Attempt', `Invalid credentials format from IP: ${ip}`, ip);
             return res.status(400).json({ success: false, message: 'Invalid credentials format' });
+        }
+
+        const attemptState = await getLoginAttemptState(loginKey);
+        const now = Date.now();
+        if (attemptState?.lockUntil && attemptState.lockUntil > now) {
+            const retryAfterSeconds = Math.ceil((attemptState.lockUntil - now) / 1000);
+            return res.status(429).json({
+                success: false,
+                message: `Too many failed attempts. Try again in ${retryAfterSeconds}s.`,
+                retryAfterSeconds
+            });
         }
 
         const db = readDB();
@@ -717,32 +963,60 @@ app.post('/api/login', async (req, res) => {
         const passwordMatch = await bcrypt.compare(password, db.auth.passwordHash || '');
 
         if (username === db.auth.username && passwordMatch) {
-            const token = createAdminToken();
+            await clearLoginAttemptState(loginKey);
+            const { sessionId, expiresAt } = await createSession({
+                ip,
+                username: db.auth.username,
+                userAgent: req.headers['user-agent'] || '',
+                createdAt: now
+            });
+            setSessionCookie(res, sessionId);
             logNotification('security', 'Login Success', `Admin login from IP: ${ip}`, ip);
-            res.json({ success: true, token, expiresInMs: ADMIN_TOKEN_TTL_MS });
+            res.json({ success: true, expiresInMs: ADMIN_SESSION_TTL_MS, expiresAt });
         } else {
+            const previous = attemptState && (now - (attemptState.firstFailureAt || 0)) <= LOGIN_LOCK_WINDOW_MS
+                ? attemptState
+                : { failedAttempts: 0, firstFailureAt: now, lockUntil: 0 };
+            const failedAttempts = (previous.failedAttempts || 0) + 1;
+            const lockUntil = failedAttempts >= LOGIN_LOCK_THRESHOLD ? (now + LOGIN_LOCK_DURATION_MS) : 0;
+            await setLoginAttemptState(loginKey, {
+                failedAttempts,
+                firstFailureAt: previous.firstFailureAt || now,
+                lockUntil,
+                lastFailureAt: now
+            });
+
+            const backoffMs = getLoginBackoffMs(failedAttempts);
+            if (backoffMs > 0) {
+                await new Promise((resolve) => setTimeout(resolve, backoffMs));
+            }
+
             logNotification('warning', 'Failed Login Attempt', `Failed login attempt from IP: ${ip} with username: ${username}`, ip);
-            res.status(401).json({ success: false, message: 'Invalid Credentials' });
+            res.status(401).json({
+                success: false,
+                message: lockUntil ? 'Too many failed attempts. Account temporarily locked.' : 'Invalid credentials',
+                lockUntil: lockUntil || null
+            });
         }
     } catch (error) {
         console.error('Login error:', error);
+        reportServerError('Login Error', error, req);
         res.status(500).json({ error: 'Login failed' });
     }
 });
 
 // Validate Token
-app.post('/api/validate-token', (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1] || req.body?.token;
-    
-    if (!validateStoredToken(token)) {
-        return res.status(401).json({ success: false, message: 'Invalid token' });
-    }
-    
-    res.json({ success: true, valid: true });
+app.post('/api/validate-token', validateAdminToken, (req, res) => {
+    res.json({
+        success: true,
+        valid: true,
+        expiresAt: req.adminSession?.expiresAt || null
+    });
 });
 
-app.post('/api/logout', validateAdminToken, (req, res) => {
-    adminSessions.delete(req.adminToken);
+app.post('/api/logout', validateAdminToken, async (req, res) => {
+    await deleteSession(req.adminSessionId);
+    clearSessionCookie(res);
     res.json({ success: true });
 });
 
@@ -779,6 +1053,7 @@ app.post('/api/track', async (req, res) => {
         // Check local fallback DB first for recent visit
         const db = readDB();
         if (!db.analytics) db.analytics = { visits: [], reelClicks: {} };
+        if (!db.analytics.sessionDurations) db.analytics.sessionDurations = {};
         const recentLocal = db.analytics.visits.find(v => v.ip === clientIP && (now - new Date(v.timestamp).getTime()) < recentWindow);
         if (recentLocal) {
             // Update pageViewed if new
@@ -818,6 +1093,7 @@ app.post('/api/track', async (req, res) => {
         }
     } catch (error) {
         console.error("Tracking Error:", error);
+        reportServerError('Tracking Error', error, req);
         res.json({ success: false });
     }
 });
@@ -829,18 +1105,26 @@ app.post('/api/track/heartbeat', async (req, res) => {
         const duration = Math.max(0, Number(req.body?.duration) || 0);
         if (!visitId) return res.json({ success: false });
 
+        const db = readDB();
+        if (!db.analytics) db.analytics = { visits: [], reelClicks: {}, sessionDurations: {} };
+        if (!db.analytics.sessionDurations || typeof db.analytics.sessionDurations !== 'object') {
+            db.analytics.sessionDurations = {};
+        }
+        db.analytics.sessionDurations[visitId] = duration;
+
         const { error } = await supabase.from('visitors').update({ session_duration: duration }).eq('id', visitId);
 
         if (error) {
-            const db = readDB();
             const idx = db.analytics.visits.findIndex(v => v.id === visitId);
             if (idx !== -1) {
                 db.analytics.visits[idx].session_duration = duration;
-                writeDB(db);
             }
+            logNotification('warning', 'Heartbeat Sync Warning', `Failed to sync session duration to Supabase: ${error.message}`, null);
         }
+        writeDB(db);
         res.json({ success: true });
     } catch (error) {
+        reportServerError('Heartbeat Error', error, req);
         res.json({ success: false });
     }
 });
@@ -861,6 +1145,7 @@ app.post('/api/track/reel', async (req, res) => {
         writeDB(db);
         res.json({ success: true });
     } catch (error) {
+        reportServerError('Reel Tracking Error', error, req);
         res.json({ success: false });
     }
 });
@@ -871,20 +1156,33 @@ app.get('/api/analytics', validateAdminToken, async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, parseInt(req.query.limit) || 50);
         const offset = (page - 1) * limit;
+        const from = parseDateParam(req.query.from);
+        const to = parseDateParam(req.query.to, { endOfDay: true });
+        if (from && to && from > to) {
+            return res.status(400).json({ error: '`from` date must be before `to` date' });
+        }
         const db = readDB();
         const clearedAt = db.analytics?.clearedAt || null;
+        const durationOverrides = db.analytics?.sessionDurations || {};
         let allVisits = [];
 
         try {
-            allVisits = await fetchSupabaseVisits(clearedAt);
+            allVisits = await fetchSupabaseVisits({ clearedAt, from, to });
         } catch (supabaseError) {
             console.warn('Supabase analytics fetch failed, using local fallback:', supabaseError.message);
             allVisits = (db.analytics?.visits || []).map(mapLocalVisit);
             if (clearedAt) {
                 allVisits = allVisits.filter((visit) => visit.timestamp && visit.timestamp >= clearedAt);
             }
+            if (from) {
+                allVisits = allVisits.filter((visit) => visit.timestamp && visit.timestamp >= from);
+            }
+            if (to) {
+                allVisits = allVisits.filter((visit) => visit.timestamp && visit.timestamp <= to);
+            }
         }
 
+        allVisits = applySessionDurationOverrides(allVisits, durationOverrides);
         allVisits.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         const visits = allVisits.slice(offset, offset + limit);
         const total = allVisits.length;
@@ -894,12 +1192,14 @@ app.get('/api/analytics', validateAdminToken, async (req, res) => {
             visits,
             pagination: { page, limit, total },
             reelClicks: db.analytics?.reelClicks || {},
-            stats
+            stats,
+            filters: { from: from || null, to: to || null, clearedAt }
         });
     } catch (error) {
         console.error('Analytics fetch error:', error);
+        reportServerError('Analytics Fetch Error', error, req);
         const db = readDB();
-        const visits = (db.analytics?.visits || []).map(mapLocalVisit);
+        const visits = applySessionDurationOverrides((db.analytics?.visits || []).map(mapLocalVisit), db.analytics?.sessionDurations || {});
         res.json({
             visits,
             pagination: { page: 1, limit: visits.length || 50, total: visits.length },
@@ -918,6 +1218,7 @@ app.get('/api/notifications', validateAdminToken, (req, res) => {
         const db = readDB();
         res.json({ notifications: db.notifications || [] });
     } catch (error) {
+        reportServerError('Notifications Read Error', error, req);
         res.status(500).json({ error: 'Failed to fetch notifications' });
     }
 });
@@ -933,6 +1234,7 @@ app.post('/api/notifications/:id/read', validateAdminToken, (req, res) => {
         }
         res.json({ success: true });
     } catch (error) {
+        reportServerError('Notifications Mark Read Error', error, req);
         res.status(500).json({ error: 'Failed to mark as read' });
     }
 });
@@ -945,6 +1247,7 @@ app.delete('/api/notifications/:id', validateAdminToken, (req, res) => {
         writeDB(db);
         res.json({ success: true });
     } catch (error) {
+        reportServerError('Notifications Delete Error', error, req);
         res.status(500).json({ error: 'Failed to delete notification' });
     }
 });
@@ -957,6 +1260,7 @@ app.post('/api/notifications/clear', validateAdminToken, (req, res) => {
         writeDB(db);
         res.json({ success: true });
     } catch (error) {
+        reportServerError('Notifications Clear Error', error, req);
         res.status(500).json({ error: 'Failed to clear notifications' });
     }
 });
@@ -987,7 +1291,59 @@ app.post('/api/settings/password', validateAdminToken, async (req, res) => {
         }
     } catch (error) {
         console.error('Password change error:', error);
+        reportServerError('Password Change Error', error, req);
         res.status(500).json({ error: 'Failed to update password' });
+    }
+});
+
+const countSupabaseVisitors = async () => {
+    const { count, error } = await supabase.from('visitors').select('id', { count: 'exact', head: true });
+    if (error) throw error;
+    return Number(count || 0);
+};
+
+const deleteSupabaseVisitorsInBatches = async () => {
+    let totalProcessed = 0;
+    for (let i = 0; i < 200; i += 1) {
+        const { data, error } = await supabase
+            .from('visitors')
+            .select('id')
+            .order('created_at', { ascending: true })
+            .limit(1000);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        const ids = data.map((row) => row.id).filter(Boolean);
+        if (ids.length === 0) break;
+
+        const { error: deleteError } = await supabase.from('visitors').delete().in('id', ids);
+        if (deleteError) throw deleteError;
+        totalProcessed += ids.length;
+
+        if (data.length < 1000) break;
+    }
+    return totalProcessed;
+};
+
+app.get('/api/settings/analytics-count', validateAdminToken, async (_req, res) => {
+    try {
+        const db = readDB();
+        let supabaseCount = 0;
+        let supabaseAvailable = true;
+
+        try {
+            supabaseCount = await countSupabaseVisitors();
+        } catch (error) {
+            supabaseAvailable = false;
+        }
+
+        const localCount = (db.analytics?.visits || []).length;
+        const total = supabaseCount + localCount;
+        res.json({ success: true, total, supabaseCount, localCount, supabaseAvailable });
+    } catch (error) {
+        reportServerError('Analytics Count Error', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch analytics count' });
     }
 });
 
@@ -997,11 +1353,17 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
         const clearedAt = new Date().toISOString();
         let supabaseCleared = false;
         let supabaseErrorMessage = null;
+        let deletedRows = 0;
 
         try {
-            const { error } = await supabase.from('visitors').delete().not('id', 'is', null);
-            if (error) throw error;
-            supabaseCleared = true;
+            const beforeCount = await countSupabaseVisitors();
+            await deleteSupabaseVisitorsInBatches();
+            const afterCount = await countSupabaseVisitors();
+            deletedRows = Math.max(0, beforeCount - afterCount);
+            supabaseCleared = afterCount === 0;
+            if (beforeCount > 0 && deletedRows === 0) {
+                throw new Error('Delete request completed but no Supabase rows were removed. Configure service-role key and verify RLS policies.');
+            }
         } catch (supabaseError) {
             supabaseErrorMessage = supabaseError.message || 'Supabase delete failed';
             console.warn('Supabase clear analytics failed:', supabaseErrorMessage);
@@ -1013,6 +1375,7 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
             visits: [],
             ip_logs: [],
             reelClicks: {},
+            sessionDurations: {},
             clearedAt,
             stats: {
                 total_visitors: 0,
@@ -1028,10 +1391,12 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
         res.json({
             success: true,
             supabaseCleared,
+            deletedRows,
             clearedAt,
-            message: supabaseErrorMessage ? 'Analytics cleared locally and hidden from dashboard. Supabase rows may require elevated key to hard-delete.' : 'Analytics data cleared successfully.'
+            message: supabaseErrorMessage ? 'Local analytics cleared. Supabase rows require elevated key for hard delete.' : 'Analytics data cleared successfully.'
         });
     } catch (error) {
+        reportServerError('Analytics Clear Error', error, req);
         res.status(500).json({ error: 'Failed to clear analytics' });
     }
 });
@@ -1040,15 +1405,28 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
 setInterval(() => {
     const now = Date.now();
     const windowStart = now - RATE_LIMIT_WINDOW;
-    for (const [ip, requests] of rateLimitStore.entries()) {
+    for (const [key, requests] of memoryRateLimitStore.entries()) {
         const validRequests = requests.filter(time => time > windowStart);
         if (validRequests.length === 0) {
-            rateLimitStore.delete(ip);
+            memoryRateLimitStore.delete(key);
         } else {
-            rateLimitStore.set(ip, validRequests);
+            memoryRateLimitStore.set(key, validRequests);
         }
     }
-    purgeExpiredAdminSessions();
+
+    for (const [sessionId, session] of memorySessionStore.entries()) {
+        if (!session?.expiresAt || session.expiresAt < now) {
+            memorySessionStore.delete(sessionId);
+        }
+    }
+
+    for (const [loginKey, state] of memoryLoginAttempts.entries()) {
+        const staleByWindow = !state?.firstFailureAt || (now - state.firstFailureAt) > (LOGIN_LOCK_WINDOW_MS + LOGIN_LOCK_DURATION_MS);
+        const staleByLock = state?.lockUntil && state.lockUntil < now - 60000;
+        if (staleByWindow || staleByLock) {
+            memoryLoginAttempts.delete(loginKey);
+        }
+    }
 }, 60000);
 
 // Header Icon Upload + Variant Generation
@@ -1123,9 +1501,15 @@ app.post('/api/upload/header-icon', validateAdminToken, async (req, res) => {
         res.json({ success: true, variants, defaultUrl });
     } catch (error) {
         console.error('Header upload error:', error);
-        logNotification('error', 'Header Icon Upload Error', error.message);
+        reportServerError('Header Icon Upload Error', error, req);
         res.status(500).json({ error: 'Header upload failed' });
     }
+});
+
+app.use((error, req, res, _next) => {
+    reportServerError('Unhandled API Error', error, req);
+    if (res.headersSent) return;
+    res.status(500).json({ error: 'Unexpected server error' });
 });
 
 // Handles any requests that don't match the API routes by sending back the main index.html file
@@ -1141,10 +1525,21 @@ app.get(/.*/, (req, res) => {
     res.sendFile(path.join(DIST_PATH, 'index.html'));
 });
 
+process.on('unhandledRejection', (reason) => {
+    reportServerError('Unhandled Rejection', reason);
+    console.error('Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    reportServerError('Uncaught Exception', error);
+    console.error('Uncaught Exception:', error);
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     console.log('Security middleware active (rate limiting, input checks, security headers).');
     console.log('Health endpoint: /api/health');
     console.log(`Supabase URL: ${supabaseUrl}`);
     console.log(`Static build present: ${HAS_DIST}`);
+    console.log(`Redis connected: ${redisConnected}`);
 });

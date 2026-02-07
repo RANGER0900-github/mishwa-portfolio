@@ -3,12 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "vite",
     "server": "node server/index.js",
+    "start": "node server/index.js",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "smoke:api": "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r)=>{if(!r.ok) throw new Error('Health endpoint failed'); return r.json();}).then((d)=>{if(d.status!=='ok') throw new Error('Health payload invalid'); console.log('API smoke OK');}).catch((e)=>{console.error(e.message); process.exit(1);})\""
   },
   "dependencies": {
     "@studio-freight/lenis": "^1.0.42",
@@ -16,6 +21,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^2.2.2",
     "clsx": "^2.1.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "d3-scale": "^4.0.2",
     "dotenv": "^16.3.1",
@@ -31,6 +37,7 @@
     "react-router-dom": "^7.13.0",
     "react-simple-maps": "^1.0.0",
     "recharts": "^3.7.0",
+    "redis": "^5.8.2",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.4.0"
   },

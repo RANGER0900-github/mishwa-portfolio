@@ -40,6 +40,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps';
 import { useContent } from '../../context/ContentContext';
+import { adminFetch } from '../../utils/adminApi';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const COLORS = ['#64ffda', '#0070f3', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981'];
@@ -59,9 +60,11 @@ const Analytics = () => {
     const [showExportModal, setShowExportModal] = useState(false);
     const [mapZoom, setMapZoom] = useState(1);
     const [mapCenter, setMapCenter] = useState([0, 20]);
-    const [copiedVisitorId, setCopiedVisitorId] = useState(null);
+    const [copiedVisitorKey, setCopiedVisitorKey] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(window.innerWidth < 768 ? 20 : 50);
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const isMobile = pageSize === 20;
     const [mobileSections, setMobileSections] = useState({
         charts: true,
@@ -74,12 +77,19 @@ const Analytics = () => {
         setMobileSections((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
+    const getVisitorKey = (visitor, index, surface = 'table') => (
+        `${surface}:${visitor.id || 'no-id'}:${visitor.timestamp || 'no-time'}:${visitor.ip || 'no-ip'}:${index}`
+    );
+
     const fetchData = useCallback(async () => {
         try {
-            const token = localStorage.getItem('adminToken');
-            const res = await fetch(`/api/analytics?page=${currentPage}&limit=${pageSize}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            const query = new URLSearchParams({
+                page: String(currentPage),
+                limit: String(pageSize)
             });
+            if (fromDate) query.set('from', fromDate);
+            if (toDate) query.set('to', toDate);
+            const res = await adminFetch(`/api/analytics?${query.toString()}`);
             const apiData = await res.json();
             setData(apiData);
         } catch (err) {
@@ -87,7 +97,7 @@ const Analytics = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, pageSize]);
+    }, [currentPage, pageSize, fromDate, toDate]);
 
     useEffect(() => {
         fetchData();
@@ -101,11 +111,15 @@ const Analytics = () => {
         return () => window.removeEventListener('resize', updatePageSize);
     }, []);
 
-    const copyToClipboard = async (visitorId, text) => {
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [fromDate, toDate]);
+
+    const copyToClipboard = async (visitorKey, text) => {
         try {
             await navigator.clipboard.writeText(text);
-            setCopiedVisitorId(visitorId);
-            setTimeout(() => setCopiedVisitorId(null), 2000);
+            setCopiedVisitorKey(visitorKey);
+            setTimeout(() => setCopiedVisitorKey((prev) => (prev === visitorKey ? null : prev)), 1200);
         } catch (err) {
             console.error('Copy failed:', err);
         }
@@ -234,6 +248,31 @@ const Analytics = () => {
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                    <input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        className="flex-1 sm:flex-none px-3 py-3 bg-black/20 border border-white/10 rounded-xl text-gray-300 text-sm focus:outline-none focus:border-secondary"
+                        title="From date"
+                    />
+                    <input
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className="flex-1 sm:flex-none px-3 py-3 bg-black/20 border border-white/10 rounded-xl text-gray-300 text-sm focus:outline-none focus:border-secondary"
+                        title="To date"
+                    />
+                    {(fromDate || toDate) && (
+                        <button
+                            onClick={() => {
+                                setFromDate('');
+                                setToDate('');
+                            }}
+                            className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all text-sm"
+                        >
+                            Clear Dates
+                        </button>
+                    )}
                     <button
                         onClick={() => setShowExportModal(true)}
                         className="flex-1 sm:flex-none px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all flex items-center justify-center gap-2"
@@ -421,7 +460,9 @@ const Analytics = () => {
                             <ZoomableGroup
                                 zoom={mapZoom}
                                 center={mapCenter}
-                                transitionDuration={250}
+                                minZoom={1}
+                                maxZoom={8}
+                                transitionDuration={450}
                                 onMoveEnd={({ coordinates, zoom }) => {
                                     setMapCenter(coordinates);
                                     setMapZoom(clamp(zoom, 1, 8));
@@ -544,11 +585,11 @@ const Analytics = () => {
                                         <div className="flex items-center gap-2">
                                             <span className="text-white font-bold">{v.ip}</span>
                                             <button
-                                                onClick={() => copyToClipboard(v.id || `${v.ip}-${index}`, v.ip)}
+                                                onClick={() => copyToClipboard(getVisitorKey(v, index, 'desktop'), v.ip)}
                                                 className="p-2 rounded-lg bg-white/5 hover:bg-secondary/20 border border-white/10 hover:border-secondary/50 transition-all duration-300"
                                                 title="Copy IP"
                                             >
-                                                {copiedVisitorId === (v.id || `${v.ip}-${index}`) ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
+                                                {copiedVisitorKey === getVisitorKey(v, index, 'desktop') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
                                             </button>
                                         </div>
                                         <span className="text-[10px] text-gray-500 font-mono mt-1 block truncate max-w-[220px]">{v.userAgent}</span>
@@ -594,11 +635,11 @@ const Analytics = () => {
                                     <p className="text-xs text-gray-500 truncate">{v.userAgent}</p>
                                 </div>
                                 <button
-                                    onClick={() => copyToClipboard(v.id || `${v.ip}-${index}`, v.ip)}
+                                    onClick={() => copyToClipboard(getVisitorKey(v, index, 'mobile'), v.ip)}
                                     className="p-2 rounded-lg bg-white/5 border border-white/10"
                                     title="Copy IP"
                                 >
-                                    {copiedVisitorId === (v.id || `${v.ip}-${index}`) ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
+                                    {copiedVisitorKey === getVisitorKey(v, index, 'mobile') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
                                 </button>
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-3 text-xs">

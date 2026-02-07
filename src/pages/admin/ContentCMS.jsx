@@ -8,6 +8,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import SmoothColorPicker from '../../components/SmoothColorPicker';
+import { adminFetch } from '../../utils/adminApi';
 
 const DEFAULT_ARCHIVE_CATEGORIES = [
     "Beauty & Personal Care",
@@ -29,6 +30,10 @@ const ContentCMS = () => {
     const [previewProject, setPreviewProject] = useState(null);
     const [showSaveButton, setShowSaveButton] = useState(false);
     const [colorPickerOpen, setColorPickerOpen] = useState(null);
+    const [historyItems, setHistoryItems] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [restoringHistoryId, setRestoringHistoryId] = useState(null);
     const fileInputRef = useRef(null);
     const [currentUploadTarget, setCurrentUploadTarget] = useState({ type: null, id: null });
     const saveButtonRef = useRef(null);
@@ -49,6 +54,12 @@ const ContentCMS = () => {
         }
     }, [content, localContent]);
 
+    useEffect(() => {
+        if (activeTab === 'history') {
+            fetchHistory();
+        }
+    }, [activeTab]);
+
     if (!localContent) return (
         <div className="flex items-center justify-center min-h-[400px]">
             <Loader2 className="animate-spin text-secondary" size={32} />
@@ -62,6 +73,9 @@ const ContentCMS = () => {
             await updateContent(localContent);
             toast.success('Content updated successfully!');
             setShowSaveButton(false);
+            if (historyLoaded) {
+                fetchHistory({ force: true });
+            }
         } catch (err) {
             toast.error('Failed to update content');
         }
@@ -71,6 +85,45 @@ const ContentCMS = () => {
     const trackChange = (newContent) => {
         setLocalContent(newContent);
         setShowSaveButton(true);
+    };
+
+    const fetchHistory = async ({ force = false } = {}) => {
+        if (historyLoading) return;
+        if (historyLoaded && !force) return;
+        setHistoryLoading(true);
+        try {
+            const res = await adminFetch('/api/content/history?limit=30');
+            const payload = await res.json();
+            setHistoryItems(payload.history || []);
+            setHistoryLoaded(true);
+        } catch (error) {
+            toast.error('Failed to load version history.');
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    const rollbackToVersion = async (versionId) => {
+        if (!versionId) return;
+        if (!window.confirm('Rollback to this version? Current unsaved edits will be replaced.')) return;
+
+        setRestoringHistoryId(versionId);
+        try {
+            const res = await adminFetch(`/api/content/history/${versionId}/rollback`, { method: 'POST' });
+            const payload = await res.json();
+            if (!res.ok || !payload?.success) {
+                throw new Error(payload?.error || 'Rollback failed');
+            }
+
+            setLocalContent(payload.content);
+            setShowSaveButton(false);
+            toast.success('Content restored from selected version.');
+            await fetchHistory({ force: true });
+        } catch (error) {
+            toast.error(error.message || 'Failed to rollback version.');
+        } finally {
+            setRestoringHistoryId(null);
+        }
     };
 
     const handleProjectChange = (id, field, value) => {
@@ -158,9 +211,9 @@ const ContentCMS = () => {
 
                 const response = await fetch(endpoint, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
-                        'Content-Type': 'application/json',
-                        ...(localStorage.getItem('adminToken') ? { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } : {})
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         file: base64,
@@ -452,7 +505,7 @@ const ContentCMS = () => {
             </AnimatePresence>
 
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mb-8">
-                {['projects', 'archive', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer'].map(tab => (
+                {['projects', 'archive', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer', 'history'].map(tab => (
                     <motion.button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -910,6 +963,54 @@ const ContentCMS = () => {
                                     <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${localContent.footer?.showSocial ? 'left-7' : 'left-1'}`} />
                                 </button>
                             </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {activeTab === 'history' && (
+                    <motion.div key="history" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 max-w-4xl">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Version History</h3>
+                                    <p className="text-sm text-gray-400">Restore previous CMS snapshots.</p>
+                                </div>
+                                <button
+                                    onClick={() => fetchHistory({ force: true })}
+                                    className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm font-bold hover:text-primary hover:border-primary/40 transition-all"
+                                >
+                                    Refresh History
+                                </button>
+                            </div>
+
+                            {historyLoading ? (
+                                <div className="text-sm text-gray-400">Loading history...</div>
+                            ) : historyItems.length === 0 ? (
+                                <div className="text-sm text-gray-500">No historical snapshots available yet.</div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {historyItems.map((item) => (
+                                        <div key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="text-white font-semibold truncate">{new Date(item.timestamp).toLocaleString()}</p>
+                                                <p className="text-xs text-gray-400 uppercase tracking-wide">
+                                                    {item.action} | Projects: {item.projectCount} | Reviews: {item.reviewCount}
+                                                </p>
+                                                {item.actorIp ? (
+                                                    <p className="text-xs text-gray-500 mt-1">IP: {item.actorIp}</p>
+                                                ) : null}
+                                            </div>
+                                            <button
+                                                onClick={() => rollbackToVersion(item.id)}
+                                                disabled={restoringHistoryId === item.id}
+                                                className="px-4 py-2 rounded-lg bg-secondary/15 border border-secondary/30 text-secondary text-sm font-bold hover:bg-secondary/25 transition-all disabled:opacity-60"
+                                            >
+                                                {restoringHistoryId === item.id ? 'Restoring...' : 'Rollback'}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { fetchWithRetry } from '../utils/apiUtils';
+import { adminFetch } from '../utils/adminApi';
 
 const ContentContext = createContext();
 
@@ -35,12 +36,10 @@ export const ContentProvider = ({ children }) => {
         setContent(newContent);
 
         try {
-            const token = localStorage.getItem('adminToken');
-            const response = await fetch('/api/content', {
+            const response = await adminFetch('/api/content', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(newContent)
             });

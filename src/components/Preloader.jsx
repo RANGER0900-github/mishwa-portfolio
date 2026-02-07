@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion';
+import { useLoading } from '../context/LoadingContext';
 
 const Preloader = () => {
+    const { loadingLabel, loadedAssets, totalAssets } = useLoading();
+    const progress = totalAssets > 0 ? Math.min(100, Math.round((loadedAssets / totalAssets) * 100)) : 0;
+
     return (
         <motion.div
             initial={{ opacity: 1 }}
@@ -20,7 +24,17 @@ const Preloader = () => {
                     <div className="w-8 h-8 bg-primary rounded-full blur-md"></div>
                 </motion.div>
                 <span className="font-display font-bold text-xl tracking-widest text-white animate-pulse">
-                    LOADING ASSETS
+                    {loadingLabel || 'Loading assets'}
+                </span>
+                <div className="w-56 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <motion.div
+                        className="h-full bg-gradient-to-r from-primary to-secondary"
+                        animate={{ width: `${progress}%` }}
+                        transition={{ ease: 'easeOut', duration: 0.25 }}
+                    />
+                </div>
+                <span className="text-xs text-gray-400 tracking-[0.2em] uppercase">
+                    {totalAssets > 0 ? `${loadedAssets} / ${totalAssets}` : 'Preparing'}
                 </span>
             </div>
         </motion.div>

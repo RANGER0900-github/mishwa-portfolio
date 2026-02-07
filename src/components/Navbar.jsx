@@ -10,6 +10,26 @@ const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
+    const scrollToSection = (href) => {
+        const tryScroll = (attempt = 0) => {
+            const element = document.querySelector(href);
+            if (element) {
+                if (window.lenis) {
+                    window.lenis.scrollTo(element, { offset: -24, duration: 1.1 });
+                } else {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                return;
+            }
+
+            if (attempt < 120) {
+                requestAnimationFrame(() => tryScroll(attempt + 1));
+            }
+        };
+
+        tryScroll();
+    };
+
     useMotionValueEvent(scrollY, "change", (latest) => {
         const previous = scrollY.getPrevious();
         if (latest > previous && latest > 150) {
@@ -23,13 +43,9 @@ const Navbar = () => {
         e.preventDefault();
         if (location.pathname !== '/') {
             navigate('/');
-            setTimeout(() => {
-                const element = document.querySelector(href);
-                if (element) element.scrollIntoView({ behavior: 'smooth' });
-            }, 300);
+            scrollToSection(href);
         } else {
-            const element = document.querySelector(href);
-            if (element) element.scrollIntoView({ behavior: 'smooth' });
+            scrollToSection(href);
         }
         setIsOpen(false);
     };

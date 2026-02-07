@@ -4,17 +4,13 @@ import {
     Trash2, Filter, Clock, Globe, User, AlertOctagon, Info, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { adminFetch } from '../../utils/adminApi';
 
 const Notifications = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
-
-    const getAuthHeaders = () => {
-        const token = localStorage.getItem('adminToken');
-        return token ? { Authorization: `Bearer ${token}` } : {};
-    };
 
     useEffect(() => {
         fetchNotifications();
@@ -24,9 +20,7 @@ const Notifications = () => {
 
     const fetchNotifications = async () => {
         try {
-            const res = await fetch('/api/notifications', {
-                headers: getAuthHeaders()
-            });
+            const res = await adminFetch('/api/notifications');
             const data = await res.json();
             setNotifications(data.notifications || []);
         } catch (err) {
@@ -38,9 +32,8 @@ const Notifications = () => {
 
     const clearNotification = async (id) => {
         try {
-            await fetch(`/api/notifications/${id}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
+            await adminFetch(`/api/notifications/${id}`, {
+                method: 'DELETE'
             });
             setNotifications(prev => prev.filter(n => n.id !== id));
         } catch (err) {
@@ -50,9 +43,8 @@ const Notifications = () => {
 
     const clearAll = async () => {
         try {
-            await fetch('/api/notifications/clear', {
-                method: 'POST',
-                headers: getAuthHeaders()
+            await adminFetch('/api/notifications/clear', {
+                method: 'POST'
             });
             setNotifications([]);
         } catch (err) {
@@ -62,9 +54,8 @@ const Notifications = () => {
 
     const markAsRead = async (id) => {
         try {
-            await fetch(`/api/notifications/${id}/read`, {
-                method: 'POST',
-                headers: getAuthHeaders()
+            await adminFetch(`/api/notifications/${id}/read`, {
+                method: 'POST'
             });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
         } catch (err) {

@@ -38,6 +38,11 @@ html.lenis {
   height: auto;
 }
 
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
 .lenis.lenis-smooth {
   scroll-behavior: auto !important;
 }
@@ -55,6 +60,12 @@ html.lenis {
 
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lenis.lenis-smooth {
+    scroll-behavior: smooth !important;
+  }
 }
 
 /* Hardware Acceleration Hint */

@@ -1,20 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Lenis from '@studio-freight/lenis';
 import { LoadingProvider, useLoading } from './context/LoadingContext';
 import { ContentProvider } from './context/ContentContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Preloader from './components/Preloader';
-import Home from './pages/Home';
-import AllReels from './pages/AllReels';
-import Login from './pages/admin/Login';
-import Dashboard from './pages/admin/Dashboard';
-import ContentCMS from './pages/admin/ContentCMS';
-import Analytics from './pages/admin/Analytics';
-import Settings from './pages/admin/Settings';
-import Notifications from './pages/admin/Notifications';
-import AdminLayout from './layouts/AdminLayout';
 import { AnimatePresence } from 'framer-motion';
+
+const Home = lazy(() => import('./pages/Home'));
+const AllReels = lazy(() => import('./pages/AllReels'));
+const Login = lazy(() => import('./pages/admin/Login'));
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const ContentCMS = lazy(() => import('./pages/admin/ContentCMS'));
+const Analytics = lazy(() => import('./pages/admin/Analytics'));
+const Settings = lazy(() => import('./pages/admin/Settings'));
+const Notifications = lazy(() => import('./pages/admin/Notifications'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
 const MainContent = () => {
   const { isLoading } = useLoading();
@@ -22,10 +23,20 @@ const MainContent = () => {
   const [visitIdState, setVisitIdState] = useState(() => sessionStorage.getItem('portfolioVisitId'));
   const sessionStartRef = useRef(Date.now());
 
+  useEffect(() => {
+    if (!window.lenis) return;
+    if (isLoading) {
+      window.lenis.stop();
+      return;
+    }
+    window.lenis.start();
+  }, [isLoading]);
+
   // Scroll to new page top on route change
   useEffect(() => {
     if (window.lenis) {
       window.lenis.scrollTo(0, { immediate: true });
+      return;
     }
     window.scrollTo(0, 0);
   }, [location]);
@@ -103,50 +114,71 @@ const MainContent = () => {
       </AnimatePresence>
 
       {!isLoading && (
-        <Routes location={location} key={location.pathname}>
-          <Route index element={<Home />} />
-          <Route path="/reels" element={<AllReels />} />
+        <Suspense
+          fallback={(
+            <div className="min-h-screen flex items-center justify-center text-white/70">
+              Loading page...
+            </div>
+          )}
+        >
+          <Routes location={location} key={location.pathname}>
+            <Route index element={<Home />} />
+            <Route path="/reels" element={<AllReels />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin/login" element={<Login />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="content" element={<ContentCMS />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="notifications" element={<Notifications />} />
-          </Route>
-        </Routes>
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<Login />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="content" element={<ContentCMS />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="notifications" element={<Notifications />} />
+            </Route>
+          </Routes>
+        </Suspense>
       )}
     </>
   );
 };
 
 function App() {
+  const lenisRef = useRef(null);
+
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return undefined;
+
     const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      duration: 1.05,
+      easing: (t) => 1 - Math.pow(1 - t, 4),
       direction: 'vertical',
       gestureDirection: 'vertical',
       smooth: true,
-      mouseMultiplier: 1,
-      smoothTouch: false,
-      touchMultiplier: 2,
+      smoothTouch: true,
+      syncTouch: true,
+      touchMultiplier: 1.25,
+      wheelMultiplier: 0.95,
       infinite: false,
     });
 
+    lenisRef.current = lenis;
     window.lenis = lenis;
+    let rafId = 0;
 
     function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
+      if (!lenisRef.current) return;
+      lenisRef.current.raf(time);
+      rafId = requestAnimationFrame(raf);
     }
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
     return () => {
+      cancelAnimationFrame(rafId);
       lenis.destroy();
-      window.lenis = null;
+      lenisRef.current = null;
+      if (window.lenis === lenis) {
+        window.lenis = null;
+      }
     };
   }, []);
 
