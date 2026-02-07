@@ -21,7 +21,7 @@ const AdminLayout = () => {
             
             try {
                 // Validate token with server
-                const response = await fetch('http://localhost:3000/api/validate-token', {
+                const response = await fetch('/api/validate-token', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,

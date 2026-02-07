@@ -12,7 +12,7 @@ export const ContentProvider = ({ children }) => {
 
     const fetchContent = async () => {
         try {
-            const response = await fetchWithRetry('http://localhost:3000/api/content', {}, 3);
+            const response = await fetchWithRetry('/api/content', {}, 3);
             if (!response.ok) throw new Error('Failed to fetch content');
             const data = await response.json();
             setContent(data);
@@ -36,7 +36,7 @@ export const ContentProvider = ({ children }) => {
 
         try {
             const token = localStorage.getItem('adminToken');
-            const response = await fetch('http://localhost:3000/api/content', {
+            const response = await fetch('/api/content', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

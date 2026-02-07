@@ -144,7 +144,7 @@ const ContentCMS = () => {
                 const base64 = event.target?.result;
                 const endpoint = currentUploadTarget.type === 'headerIcon' ? '/api/upload/header-icon' : '/api/upload';
 
-                const response = await fetch(`http://localhost:3000${endpoint}`, {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

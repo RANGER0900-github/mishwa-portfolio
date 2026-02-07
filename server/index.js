@@ -21,7 +21,7 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || process.env.SERVER_PORT || 3000;
 const DB_PATH = path.join(__dirname, 'data', 'db.json');
 
 // Trust proxy for production
@@ -182,6 +182,9 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(rateLimiter);
 app.use(sanitizeInput);
+
+// Serve static files from the React build
+app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 // Helper to read/write local DB
 const readDB = () => {
@@ -856,6 +859,11 @@ app.post('/api/upload/header-icon', async (req, res) => {
         logNotification('error', 'Header Icon Upload Error', error.message);
         res.status(500).json({ error: 'Header upload failed' });
     }
+});
+
+// Handles any requests that don't match the API routes by sending back the main index.html file
+app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {

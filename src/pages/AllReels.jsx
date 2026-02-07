@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, Instagram, Mail } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { formatExternalLink } from '../utils/linkUtils';
 import Navbar from '../components/Navbar';
@@ -10,11 +10,17 @@ import Footer from '../components/Footer';
 const AllReels = () => {
     const { content } = useContent();
     const [activeCategory, setActiveCategory] = useState("All");
+    const location = useLocation(); // Add this line
 
     // Ensure the archive page always opens at the top
     useEffect(() => {
-        try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { window.scrollTo(0, 0); }
-    }, []);
+        if (window.lenis) {
+            window.lenis.scrollTo(0, { immediate: true });
+        } else {
+            // Fallback for when lenis is not available
+            window.scrollTo(0, 0);
+        }
+    }, [location]); // Change dependency to [location]
 
     if (!content) return null;
     const allReels = content.projects || [];
