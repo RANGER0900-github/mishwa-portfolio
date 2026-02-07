@@ -2,54 +2,96 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Save, Trash2, Shield, AlertTriangle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { useContent } from '../../context/ContentContext';
 
 const Settings = () => {
-    const { updateContent } = useContent();
     const [passwords, setPasswords] = useState({
-        current: '',
         new: '',
         confirm: ''
     });
+    const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+    const [isClearingAnalytics, setIsClearingAnalytics] = useState(false);
+
+    const getAuthHeaders = (includeJson = false) => {
+        const token = localStorage.getItem('adminToken');
+        return {
+            ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+        };
+    };
 
     const handlePasswordChange = async (e) => {
         e.preventDefault();
+        if (!passwords.new || passwords.new.length < 8) {
+            toast.error('Use at least 8 characters for better security.');
+            return;
+        }
+
         if (passwords.new !== passwords.confirm) {
             toast.error("New passwords don't match!");
             return;
         }
 
-        // In a real app, verify 'current' against backend. 
-        // Here we just simulate a change request to /api/settings/password
-        const res = await fetch('/api/settings/password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: 'admin',
-                newPassword: passwords.new
-            })
-        });
+        setIsUpdatingPassword(true);
 
-        const data = await res.json();
-        if (data.success) {
-            toast.success("Password Updated Successfully!");
-            setPasswords({ current: '', new: '', confirm: '' });
-        } else {
-            toast.error("Failed to update password");
+        try {
+            const res = await fetch('/api/settings/password', {
+                method: 'POST',
+                headers: getAuthHeaders(true),
+                body: JSON.stringify({
+                    username: 'admin',
+                    newPassword: passwords.new
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success('Password updated successfully.');
+                setPasswords({ new: '', confirm: '' });
+                return;
+            }
+
+            toast.error(data?.message || data?.error || 'Failed to update password.');
+        } catch (error) {
+            toast.error('Password update failed. Please retry.');
+        } finally {
+            setIsUpdatingPassword(false);
         }
     };
 
     const handleClearAnalytics = async () => {
         if (!window.confirm("Are you sure? This effectively deletes all visitor history.")) return;
 
-        const res = await fetch('/api/settings/clear-analytics', { method: 'POST' });
-        if (res.ok) {
-            toast.success("Analytics Data Cleared.");
+        setIsClearingAnalytics(true);
+
+        try {
+            const res = await fetch('/api/settings/clear-analytics', {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
+            const data = await res.json();
+
+            if (res.status === 401) {
+                toast.error('Session expired. Please login again.');
+                localStorage.removeItem('adminToken');
+                window.location.href = '/admin/login';
+                return;
+            }
+
+            if (res.ok && data.success) {
+                toast.success(data.message || 'Analytics data cleared.');
+                return;
+            }
+
+            toast.error(data?.error || 'Failed to clear analytics.');
+        } catch (error) {
+            toast.error('Failed to clear analytics.');
+        } finally {
+            setIsClearingAnalytics(false);
         }
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
             <Toaster position="bottom-right" toastOptions={{
                 style: {
                     background: '#112240',
@@ -59,7 +101,7 @@ const Settings = () => {
             }} />
 
             <header className="mb-8">
-                <h1 className="text-4xl font-display font-bold text-white mb-2">Settings<span className="text-primary">.</span></h1>
+                <h1 className="text-3xl sm:text-4xl font-display font-bold text-white mb-2">Settings<span className="text-primary">.</span></h1>
                 <p className="text-gray-400">Manage security and system data.</p>
             </header>
 
@@ -67,7 +109,7 @@ const Settings = () => {
             <motion.section
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[#112240]/50 backdrop-blur-md border border-white/5 p-8 rounded-3xl"
+                className="bg-[#112240]/50 backdrop-blur-md border border-white/5 p-4 sm:p-8 rounded-3xl"
             >
                 <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 bg-primary/10 rounded-xl text-primary">
@@ -100,9 +142,13 @@ const Settings = () => {
                             placeholder="••••••••"
                         />
                     </div>
-                    <button type="submit" className="flex items-center gap-2 px-6 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors">
+                    <button
+                        type="submit"
+                        disabled={isUpdatingPassword}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
                         <Save size={18} />
-                        Update Password
+                        {isUpdatingPassword ? 'Updating...' : 'Update Password'}
                     </button>
                 </form>
             </motion.section>
@@ -112,7 +158,7 @@ const Settings = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-red-500/5 backdrop-blur-md border border-red-500/20 p-8 rounded-3xl"
+                className="bg-red-500/5 backdrop-blur-md border border-red-500/20 p-4 sm:p-8 rounded-3xl"
             >
                 <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
@@ -124,17 +170,18 @@ const Settings = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h3 className="text-white font-bold">Clear Analytics Data</h3>
                         <p className="text-sm text-gray-400">Reset all visitor logs and counters to zero.</p>
                     </div>
                     <button
                         onClick={handleClearAnalytics}
-                        className="flex items-center gap-2 px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                        disabled={isClearingAnalytics}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all disabled:opacity-60"
                     >
                         <Trash2 size={18} />
-                        Clear Data
+                        {isClearingAnalytics ? 'Clearing...' : 'Clear Data'}
                     </button>
                 </div>
             </motion.section>

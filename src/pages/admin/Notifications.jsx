@@ -11,6 +11,11 @@ const Notifications = () => {
     const [filter, setFilter] = useState('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
 
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('adminToken');
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
     useEffect(() => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 30000);
@@ -19,7 +24,9 @@ const Notifications = () => {
 
     const fetchNotifications = async () => {
         try {
-            const res = await fetch('/api/notifications');
+            const res = await fetch('/api/notifications', {
+                headers: getAuthHeaders()
+            });
             const data = await res.json();
             setNotifications(data.notifications || []);
         } catch (err) {
@@ -31,7 +38,10 @@ const Notifications = () => {
 
     const clearNotification = async (id) => {
         try {
-            await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+            await fetch(`/api/notifications/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
             setNotifications(prev => prev.filter(n => n.id !== id));
         } catch (err) {
             console.error('Clear notification error:', err);
@@ -40,7 +50,10 @@ const Notifications = () => {
 
     const clearAll = async () => {
         try {
-            await fetch('/api/notifications/clear', { method: 'POST' });
+            await fetch('/api/notifications/clear', {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
             setNotifications([]);
         } catch (err) {
             console.error('Clear all error:', err);
@@ -49,7 +62,10 @@ const Notifications = () => {
 
     const markAsRead = async (id) => {
         try {
-            await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+            await fetch(`/api/notifications/${id}/read`, {
+                method: 'POST',
+                headers: getAuthHeaders()
+            });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
         } catch (err) {
             console.error('Mark read error:', err);
@@ -130,7 +146,7 @@ const Notifications = () => {
             {/* Header */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-2 flex items-center gap-4">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white mb-2 flex flex-wrap items-center gap-3">
                         Notifications
                         {unreadCount > 0 && (
                             <motion.span
@@ -147,12 +163,12 @@ const Notifications = () => {
                         Security alerts, system events, and important updates
                     </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
                     {/* Filter Dropdown */}
-                    <div className="relative">
+                    <div className="relative w-full sm:w-auto">
                         <motion.button
                             onClick={() => setShowFilterMenu(!showFilterMenu)}
-                            className="flex items-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all"
+                            className="w-full flex items-center justify-between sm:justify-start gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
@@ -166,7 +182,7 @@ const Notifications = () => {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="absolute top-full mt-2 right-0 w-56 bg-[#0d1b2a] border border-white/10 rounded-xl overflow-hidden z-10 shadow-xl"
+                                    className="absolute top-full mt-2 right-0 w-full sm:w-56 bg-[#0d1b2a] border border-white/10 rounded-xl overflow-hidden z-10 shadow-xl"
                                 >
                                     {filterOptions.map(opt => (
                                         <button
@@ -186,7 +202,7 @@ const Notifications = () => {
                     {notifications.length > 0 && (
                         <motion.button
                             onClick={clearAll}
-                            className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 hover:bg-red-500/20 transition-all"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 hover:bg-red-500/20 transition-all"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
@@ -198,7 +214,7 @@ const Notifications = () => {
                     {/* Refresh */}
                     <motion.button
                         onClick={fetchNotifications}
-                        className="flex items-center gap-2 px-4 py-3 bg-secondary/10 border border-secondary/30 rounded-xl text-secondary hover:bg-secondary/20 transition-all"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-secondary/10 border border-secondary/30 rounded-xl text-secondary hover:bg-secondary/20 transition-all"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
@@ -209,7 +225,7 @@ const Notifications = () => {
             </header>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {[
                     { label: 'Total', value: notifications.length, icon: Bell, color: 'from-cyan-500 to-blue-500' },
                     { label: 'Unread', value: unreadCount, icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
@@ -221,7 +237,7 @@ const Notifications = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
-                        className="relative overflow-hidden p-5 rounded-2xl border border-white/5 bg-[#0d1b2a]/80 backdrop-blur-sm"
+                        className="relative overflow-hidden p-4 sm:p-5 rounded-2xl border border-white/5 bg-[#0d1b2a]/80 backdrop-blur-sm"
                     >
                         <div className={`absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br ${stat.color} opacity-20 rounded-full blur-xl`}></div>
                         <stat.icon size={18} className="text-gray-500 mb-2" />
@@ -257,7 +273,7 @@ const Notifications = () => {
                                 transition={{ delay: idx * 0.05 }}
                                 className={`p-4 bg-[#0d1b2a]/80 rounded-xl border ${borderClass} hover:bg-[#0d1b2a] transition-all group ${!notification.read ? 'ring-1 ring-white/5' : ''}`}
                             >
-                                <div className="flex items-start gap-4">
+                                <div className="flex flex-col sm:flex-row items-start gap-4">
                                     <div className={`p-3 rounded-lg ${colorClass}`}>
                                         <Icon size={20} />
                                     </div>
@@ -271,7 +287,7 @@ const Notifications = () => {
                                             )}
                                         </div>
                                         <p className="text-gray-400 text-sm mb-2">{notification.message}</p>
-                                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                                             <span className="flex items-center gap-1">
                                                 <Clock size={12} />
                                                 {new Date(notification.timestamp).toLocaleString()}
@@ -284,7 +300,7 @@ const Notifications = () => {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                         {!notification.read && (
                                             <motion.button
                                                 onClick={() => markAsRead(notification.id)}

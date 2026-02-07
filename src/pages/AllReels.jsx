@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, Instagram, Mail } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { formatExternalLink } from '../utils/linkUtils';
@@ -22,22 +22,26 @@ const AllReels = () => {
         }
     }, [location]); // Change dependency to [location]
 
-    if (!content) return null;
-    const allReels = content.projects || [];
-    const { social } = content;
+    const allReels = content?.projects || [];
 
-    const categories = [
-        "All",
-        "Beauty & Personal Care",
-        "Food & Beverage",
-        "Fitness & Wellness",
-        "Fashion & Apparel",
-        "Travel & Local experience"
-    ];
+    const categories = useMemo(() => {
+        const categorySource = (content?.archiveCategories && content.archiveCategories.length > 0)
+            ? content.archiveCategories
+            : Array.from(new Set(allReels.map((reel) => reel.category).filter(Boolean)));
+        return ["All", ...categorySource];
+    }, [content?.archiveCategories, allReels]);
+
+    useEffect(() => {
+        if (!categories.includes(activeCategory)) {
+            setActiveCategory("All");
+        }
+    }, [activeCategory, categories]);
 
     const filteredReels = activeCategory === "All"
         ? allReels
         : allReels.filter(reel => reel.category === activeCategory);
+
+    if (!content) return null;
 
     return (
         <div className="bg-background min-h-screen text-white relative overflow-hidden">
@@ -88,12 +92,13 @@ const AllReels = () => {
                                 onClick={() => {
                                     if (reel.link) {
                                         try {
+                                            const visitId = sessionStorage.getItem('portfolioVisitId');
                                             fetch('/api/track/reel', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ reelId: reel.id })
+                                                body: JSON.stringify({ reelId: reel.id, visitId })
                                             }).catch(() => { });
-                                        } catch (e) { }
+                                        } catch { }
                                         window.open(formatExternalLink(reel.link), '_blank');
                                     }
                                 }}

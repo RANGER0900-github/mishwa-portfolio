@@ -19,8 +19,7 @@ import { AnimatePresence } from 'framer-motion';
 const MainContent = () => {
   const { isLoading } = useLoading();
   const location = useLocation();
-  const visitIdRef = useRef(null);
-    const [visitIdState, setVisitIdState] = useState(null);
+  const [visitIdState, setVisitIdState] = useState(() => sessionStorage.getItem('portfolioVisitId'));
   const sessionStartRef = useRef(Date.now());
 
   // Scroll to new page top on route change
@@ -31,68 +30,69 @@ const MainContent = () => {
     window.scrollTo(0, 0);
   }, [location]);
 
-  // ENHANCED TRACKING LOGIC
+  // Track one session per tab and keep its duration updated
   useEffect(() => {
-    if (!isLoading) {
-      // Track page visit with enhanced data
-      // Avoid duplicate tracking for same pathname during a single session
-      const trackedKey = `tracked:${location.pathname}`;
-      if (window[trackedKey]) return;
-      window[trackedKey] = true;
+    if (isLoading || visitIdState) return;
 
-      fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userAgent: navigator.userAgent,
-          pageViewed: location.pathname,
-          reelId: null
-        })
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userAgent: navigator.userAgent,
+        pageViewed: location.pathname,
+        reelId: null
       })
-        .then(res => res.json())
-        .then(data => {
-          // Accept visitId from server regardless of source
-          const id = (data && (data.visitId || data.visit_id || data.id)) || null;
-          if (id) {
-            visitIdRef.current = id;
-            setVisitIdState(id);
-            sessionStartRef.current = Date.now();
-          }
-        })
-        .catch(err => console.error("Tracking failed", err));
-    }
-  }, [location, isLoading]);
+    })
+      .then(res => res.json())
+      .then(data => {
+        const id = (data && (data.visitId || data.visit_id || data.id)) || null;
+        if (id) {
+          sessionStorage.setItem('portfolioVisitId', String(id));
+          setVisitIdState(String(id));
+          sessionStartRef.current = Date.now();
+        }
+      })
+      .catch(err => console.error('Tracking failed', err));
+  }, [location.pathname, isLoading, visitIdState]);
 
   // Session duration heartbeat — runs when we have a visitId
   useEffect(() => {
     if (!visitIdState) return;
 
-    const heartbeatInterval = setInterval(() => {
+    const sendHeartbeat = (keepalive = false) => {
       const duration = Math.floor((Date.now() - sessionStartRef.current) / 1000);
       fetch('/api/track/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        keepalive,
         body: JSON.stringify({
           visitId: visitIdState,
           duration
         })
       }).catch(() => { });
-    }, 30000); // Every 30 seconds
-
-    // Send final duration on page unload
-    const handleUnload = () => {
-      const duration = Math.floor((Date.now() - sessionStartRef.current) / 1000);
-      navigator.sendBeacon('/api/track/heartbeat', JSON.stringify({
-        visitId: visitIdState,
-        duration
-      }));
     };
 
-    window.addEventListener('beforeunload', handleUnload);
+    const heartbeatInterval = setInterval(() => {
+      sendHeartbeat(false);
+    }, 10000); // Every 10 seconds
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sendHeartbeat(true);
+      }
+    };
+
+    const handlePageExit = () => sendHeartbeat(true);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handlePageExit);
+    window.addEventListener('pagehide', handlePageExit);
 
     return () => {
       clearInterval(heartbeatInterval);
-      window.removeEventListener('beforeunload', handleUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handlePageExit);
+      window.removeEventListener('pagehide', handlePageExit);
     };
   }, [visitIdState]);
 

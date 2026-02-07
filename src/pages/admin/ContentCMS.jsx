@@ -2,12 +2,23 @@ import { useState, useRef, useEffect } from 'react';
 import { useContent } from '../../context/ContentContext';
 import {
     Save, Plus, Trash, Image as ImageIcon, Link as LinkIcon, Upload, Loader2,
-    Eye, EyeOff, Palette, Move, Star, Instagram, Mail, Youtube, Twitter,
-    GripVertical, ExternalLink, User, MessageSquare
+    Eye, Palette, Move, Star, Instagram, Mail, Youtube, Twitter,
+    GripVertical, MessageSquare, ImagePlus
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import SmoothColorPicker from '../../components/SmoothColorPicker';
+
+const DEFAULT_ARCHIVE_CATEGORIES = [
+    "Beauty & Personal Care",
+    "Food & Beverage",
+    "Fitness & Wellness",
+    "Fashion & Apparel",
+    "Travel & Local experience",
+    "Tech & Gadgets",
+    "Real Estate",
+    "Other"
+];
 
 const ContentCMS = () => {
     const { content, updateContent } = useContent();
@@ -16,13 +27,12 @@ const ContentCMS = () => {
     const [activeTab, setActiveTab] = useState('projects');
     const [uploading, setUploading] = useState(null);
     const [previewProject, setPreviewProject] = useState(null);
-    const [draggedText, setDraggedText] = useState({ x: 50, y: 50 });
-    const [hasChanges, setHasChanges] = useState(false);
     const [showSaveButton, setShowSaveButton] = useState(false);
     const [colorPickerOpen, setColorPickerOpen] = useState(null);
     const fileInputRef = useRef(null);
     const [currentUploadTarget, setCurrentUploadTarget] = useState({ type: null, id: null });
     const saveButtonRef = useRef(null);
+    const getUploadKey = (type, id = null) => `${type || 'global'}-${id ?? 'global'}`;
 
     useEffect(() => {
         if (content && !localContent) {
@@ -31,9 +41,10 @@ const ContentCMS = () => {
                 projects: content.projects || [],
                 social: content.social || { email: '', instagram: '', youtube: '', twitter: '' },
                 reviews: content.reviews || [],
-                footer: content.footer || { copyright: '', showSocial: true }
+                footer: content.footer || { copyright: '', showSocial: true },
+                archiveCategories: content.archiveCategories || DEFAULT_ARCHIVE_CATEGORIES,
+                cinema: content.cinema || { title: '', subtitle: '', items: [] }
             });
-            setHasChanges(false);
             setShowSaveButton(false);
         }
     }, [content, localContent]);
@@ -50,7 +61,6 @@ const ContentCMS = () => {
         try {
             await updateContent(localContent);
             toast.success('Content updated successfully!');
-            setHasChanges(false);
             setShowSaveButton(false);
         } catch (err) {
             toast.error('Failed to update content');
@@ -60,7 +70,6 @@ const ContentCMS = () => {
 
     const trackChange = (newContent) => {
         setLocalContent(newContent);
-        setHasChanges(true);
         setShowSaveButton(true);
     };
 
@@ -79,10 +88,13 @@ const ContentCMS = () => {
     };
 
     const addProject = () => {
+        const availableCategories = Array.isArray(localContent.archiveCategories) && localContent.archiveCategories.length > 0
+            ? localContent.archiveCategories
+            : DEFAULT_ARCHIVE_CATEGORIES;
         const newProject = {
             id: Date.now(),
             title: "New Project",
-            category: "Fashion & Apparel",
+            category: availableCategories[0] || "Other",
             image: "https://images.unsplash.com/photo-1549557613-21c6020586a0",
             link: "",
             orientation: "portrait",
@@ -136,7 +148,7 @@ const ContentCMS = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploading(currentUploadTarget.id || 'global');
+        setUploading(getUploadKey(currentUploadTarget.type, currentUploadTarget.id));
 
         try {
             const reader = new FileReader();
@@ -146,7 +158,10 @@ const ContentCMS = () => {
 
                 const response = await fetch(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(localStorage.getItem('adminToken') ? { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } : {})
+                    },
                     body: JSON.stringify({
                         file: base64,
                         filename: file.name,
@@ -162,6 +177,13 @@ const ContentCMS = () => {
                 } else if (currentUploadTarget.type === 'review' && data.url) {
                     handleReviewChange(currentUploadTarget.id, 'image', data.url);
                     toast.success('Image uploaded!');
+                } else if (currentUploadTarget.type === 'cinema' && data.url) {
+                    const items = [...(localContent.cinema?.items || [])];
+                    if (typeof currentUploadTarget.id === 'number' && items[currentUploadTarget.id]) {
+                        items[currentUploadTarget.id].image = data.url;
+                        trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
+                    }
+                    toast.success('Cinema image uploaded!');
                 } else if (currentUploadTarget.type === 'aboutImage') {
                     const aboutUrl = data.url || data.defaultUrl || (data.variants && data.variants['180px']) || (data.variants && Object.values(data.variants)[0]);
                     trackChange({ ...localContent, about: { ...localContent.about, image: aboutUrl } });
@@ -190,13 +212,50 @@ const ContentCMS = () => {
         fileInputRef.current?.click();
     };
 
-    const categories = [
-        "Beauty & Personal Care", "Food & Beverage", "Fitness & Wellness",
-        "Fashion & Apparel", "Travel & Local experience", "Tech & Gadgets",
-        "Real Estate", "Other"
-    ];
+    const categories = Array.isArray(localContent.archiveCategories)
+        ? localContent.archiveCategories
+        : DEFAULT_ARCHIVE_CATEGORIES;
 
-    const colorPresets = ['#ffffff', '#64ffda', '#0070f3', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#000000'];
+    const updateArchiveCategory = (index, value) => {
+        const nextCategories = [...(Array.isArray(localContent.archiveCategories) ? localContent.archiveCategories : DEFAULT_ARCHIVE_CATEGORIES)];
+        nextCategories[index] = value;
+        trackChange({ ...localContent, archiveCategories: nextCategories });
+    };
+
+    const addArchiveCategory = () => {
+        const nextCategories = [...(Array.isArray(localContent.archiveCategories) ? localContent.archiveCategories : DEFAULT_ARCHIVE_CATEGORIES), `New Category ${categories.length + 1}`];
+        trackChange({ ...localContent, archiveCategories: nextCategories });
+    };
+
+    const removeArchiveCategory = (index) => {
+        const nextCategories = [...(Array.isArray(localContent.archiveCategories) ? localContent.archiveCategories : DEFAULT_ARCHIVE_CATEGORIES)];
+        nextCategories.splice(index, 1);
+        trackChange({ ...localContent, archiveCategories: nextCategories });
+    };
+
+    const addCinemaItem = () => {
+        const nextItems = [...(localContent.cinema?.items || [])];
+        nextItems.unshift({
+            title: 'New Cinematic Project',
+            category: 'Documentary',
+            description: 'Describe the cinematic work here.',
+            image: ''
+        });
+        trackChange({ ...localContent, cinema: { ...localContent.cinema, items: nextItems } });
+    };
+
+    const removeCinemaItem = (index) => {
+        const nextItems = [...(localContent.cinema?.items || [])];
+        nextItems.splice(index, 1);
+        trackChange({ ...localContent, cinema: { ...localContent.cinema, items: nextItems } });
+    };
+
+    const updateCinemaItem = (index, field, value) => {
+        const items = [...(localContent.cinema?.items || [])];
+        if (!items[index]) return;
+        items[index] = { ...items[index], [field]: value };
+        trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
+    };
 
     const ProjectPreview = ({ project, onClose }) => {
         const [textPos, setTextPos] = useState(project.textPosition || { x: 50, y: 85 });
@@ -286,7 +345,7 @@ const ContentCMS = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
                     >
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-primary/30 rounded-xl p-3">
                                 <p className="text-gray-300 text-xs mb-1 font-bold uppercase">Position X</p>
                                 <p className="text-primary font-mono font-bold text-sm">{textPos.x.toFixed(1)}%</p>
@@ -340,7 +399,7 @@ const ContentCMS = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto pb-20">
+        <div className="max-w-7xl mx-auto pb-20 overflow-x-hidden">
             <Toaster position="bottom-right" toastOptions={{
                 style: { background: '#112240', color: '#64ffda', border: '1px solid rgba(100,255,218,0.2)' }
             }} />
@@ -349,13 +408,13 @@ const ContentCMS = () => {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpload}
-                accept="image/svg+xml,image/jpeg,image/png,image/gif,image/webp"
+                accept="image/*"
                 className="hidden"
             />
 
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
-                    <h1 className="text-5xl font-display font-black text-white mb-2">Content CMS<span className="text-primary">.</span></h1>
+                    <h1 className="text-3xl sm:text-5xl font-display font-black text-white mb-2">Content CMS<span className="text-primary">.</span></h1>
                     <p className="text-gray-400">Manage your portfolio content, projects, and reviews.</p>
                 </div>
             </header>
@@ -368,7 +427,7 @@ const ContentCMS = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.9 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                        className="fixed bottom-8 right-8 z-40"
+                        className="fixed bottom-28 sm:bottom-6 right-4 sm:right-8 z-40"
                     >
                         <motion.button
                             onClick={() => {
@@ -392,12 +451,12 @@ const ContentCMS = () => {
                 )}
             </AnimatePresence>
 
-            <div className="flex gap-3 mb-8 overflow-x-auto pb-2 flex-wrap">
-                {['projects', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer'].map(tab => (
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mb-8">
+                {['projects', 'archive', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer'].map(tab => (
                     <motion.button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-5 py-3 rounded-xl font-bold uppercase tracking-wider transition-all border text-sm ${activeTab === tab
+                        className={`px-3 py-2 sm:px-5 sm:py-3 rounded-xl font-bold uppercase tracking-wider transition-all border text-[11px] sm:text-sm text-center ${activeTab === tab
                             ? 'bg-white/10 border-primary text-primary shadow-[0_0_15px_rgba(100,255,218,0.2)]'
                             : 'bg-transparent border-white/10 text-gray-500 hover:text-white'
                             }`}
@@ -412,13 +471,13 @@ const ContentCMS = () => {
             <AnimatePresence mode='wait'>
                 {activeTab === 'projects' && (
                     <motion.div key="projects" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                        <motion.button onClick={addProject} className="w-full py-6 border-2 border-dashed border-white/10 rounded-3xl text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-3 font-bold text-lg" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                        <motion.button onClick={addProject} className="w-full py-4 sm:py-6 border-2 border-dashed border-white/10 rounded-3xl text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-3 font-bold text-base sm:text-lg" whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                             <Plus size={24} /> ADD NEW PROJECT
                         </motion.button>
 
                         <div className="grid grid-cols-1 gap-6">
                             {localContent.projects && localContent.projects.length > 0 ? localContent.projects.map((project) => (
-                                <motion.div key={project.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-[#112240]/50 border border-white/5 rounded-2xl p-6 flex flex-col lg:flex-row gap-6 group hover:border-white/20 transition-all">
+                                <motion.div key={project.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-[#112240]/50 border border-white/5 rounded-2xl p-4 sm:p-6 flex flex-col lg:flex-row gap-6 group hover:border-white/20 transition-all">
                                     <div className="w-full lg:w-56 flex-shrink-0">
                                         <div className="relative rounded-xl overflow-hidden bg-black/50 aspect-[3/4] border border-white/10">
                                             {project.image ? (
@@ -426,14 +485,14 @@ const ContentCMS = () => {
                                             ) : (
                                                 <div className="flex items-center justify-center h-full text-gray-600"><ImageIcon size={40} /></div>
                                             )}
-                                            {uploading === project.id && (
+                                            {uploading === getUploadKey('project', project.id) && (
                                                 <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
                                                     <Loader2 size={32} className="text-secondary animate-spin" />
                                                 </div>
                                             )}
                                         </div>
                                         <div className="flex gap-2 mt-3">
-                                            <motion.button onClick={() => triggerUpload('project', project.id)} disabled={uploading === project.id} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-secondary/20 border border-white/10 hover:border-secondary/50 rounded-lg text-gray-400 hover:text-secondary transition-all text-xs font-bold" whileHover={{ scale: 1.02 }}>
+                                            <motion.button onClick={() => triggerUpload('project', project.id)} disabled={uploading === getUploadKey('project', project.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-secondary/20 border border-white/10 hover:border-secondary/50 rounded-lg text-gray-400 hover:text-secondary transition-all text-xs font-bold disabled:opacity-60" whileHover={{ scale: 1.02 }}>
                                                 <Upload size={14} /> Upload
                                             </motion.button>
                                             <motion.button onClick={() => setPreviewProject(localContent.projects.find(p => p.id === project.id))} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/50 rounded-lg text-gray-400 hover:text-primary transition-all text-xs font-bold" whileHover={{ scale: 1.02 }}>
@@ -511,7 +570,7 @@ const ContentCMS = () => {
                                             </div>
                                         </div>
 
-                                        <div className="flex justify-between pt-2">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                                             <span className="text-xs text-gray-500 flex items-center gap-1"><Move size={12} /> Use Preview to drag text position</span>
                                             <motion.button onClick={() => removeProject(project.id)} className="text-red-400 hover:text-red-500 flex items-center gap-2 px-4 py-2 hover:bg-red-500/10 rounded-lg transition-all text-sm font-bold" whileHover={{ scale: 1.05 }}>
                                                 <Trash size={16} /> Remove
@@ -542,7 +601,7 @@ const ContentCMS = () => {
                                         <div className="relative">
                                             <img src={review.image} alt={review.name} className="w-16 h-16 rounded-full object-cover border-2 border-white/10" />
                                             <button onClick={() => triggerUpload('review', review.id)} className="absolute -bottom-1 -right-1 p-1.5 bg-secondary rounded-full text-black hover:scale-110 transition-transform">
-                                                {uploading === review.id ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                                {uploading === getUploadKey('review', review.id) ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                                             </button>
                                         </div>
                                         <div className="flex-1">
@@ -574,7 +633,7 @@ const ContentCMS = () => {
 
                 {activeTab === 'hero' && (
                     <motion.div key="hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-6">
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Main Title</label>
                                 <input type="text" value={localContent.hero?.title || ''} onChange={(e) => trackChange({ ...localContent, hero: { ...localContent.hero, title: e.target.value } })} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white text-2xl font-bold focus:border-primary focus:outline-none" />
@@ -597,7 +656,7 @@ const ContentCMS = () => {
 
                 {activeTab === 'social' && (
                     <motion.div key="social" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-6">
                             <h3 className="text-lg font-bold text-white mb-4">Social Media Links</h3>
 
                             <div>
@@ -623,12 +682,53 @@ const ContentCMS = () => {
                     </motion.div>
                 )}
 
+                {activeTab === 'archive' && (
+                    <motion.div key="archive" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-3xl">
+                        <div className="bg-[#112240]/50 p-6 sm:p-8 rounded-3xl border border-white/5 space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-1">Archive Categories</h3>
+                                    <p className="text-sm text-gray-400">These categories power the Archive filter buttons and project category list.</p>
+                                </div>
+                                <button onClick={addArchiveCategory} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-bold hover:border-primary/50 hover:text-primary transition-all">
+                                    <Plus size={16} /> Add Category
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {categories.length > 0 ? categories.map((category, idx) => (
+                                    <div key={`${category}-${idx}`} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3">
+                                        <div className="flex-1">
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Category {idx + 1}</label>
+                                            <input
+                                                type="text"
+                                                value={category}
+                                                onChange={(e) => updateArchiveCategory(idx, e.target.value)}
+                                                className="w-full bg-transparent border-b border-white/10 pb-2 text-white focus:border-primary focus:outline-none"
+                                                placeholder="Category name"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => removeArchiveCategory(idx)}
+                                            className="flex items-center justify-center gap-2 px-4 py-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all text-sm font-bold"
+                                        >
+                                            <Trash size={16} /> Remove
+                                        </button>
+                                    </div>
+                                )) : (
+                                    <p className="text-sm text-gray-500">No archive categories yet. Add your first category above.</p>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 {activeTab === 'cinema' && (
                     <motion.div key="cinema" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-4xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-6">
                             <h3 className="text-lg font-bold text-white mb-4">Cinema Section</h3>
                             
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Section Title</label>
                                     <input type="text" value={localContent.cinema?.title || ''} onChange={(e) => trackChange({ ...localContent, cinema: { ...localContent.cinema, title: e.target.value } })} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="Long Form Works" />
@@ -640,45 +740,56 @@ const ContentCMS = () => {
                             </div>
 
                             <div className="border-t border-white/10 pt-6">
-                                <h4 className="text-sm font-bold text-white mb-4">Cinematic Works</h4>
-                                {localContent.cinema?.items && localContent.cinema.items.map((item, idx) => (
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                                    <h4 className="text-sm font-bold text-white">Cinematic Works</h4>
+                                    <button onClick={addCinemaItem} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-bold hover:text-primary hover:border-primary/50 transition-all">
+                                        <Plus size={16} /> Add Cinematic Work
+                                    </button>
+                                </div>
+                                {localContent.cinema?.items && localContent.cinema.items.length > 0 ? localContent.cinema.items.map((item, idx) => (
                                     <div key={idx} className="mb-6 pb-6 border-b border-white/5">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <div>
                                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Title</label>
-                                                <input type="text" value={item.title || ''} onChange={(e) => {
-                                                    const items = [...localContent.cinema.items];
-                                                    items[idx].title = e.target.value;
-                                                    trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                                }} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="The Summit" />
+                                                <input type="text" value={item.title || ''} onChange={(e) => updateCinemaItem(idx, 'title', e.target.value)} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="The Summit" />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Category</label>
-                                                <input type="text" value={item.category || ''} onChange={(e) => {
-                                                    const items = [...localContent.cinema.items];
-                                                    items[idx].category = e.target.value;
-                                                    trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                                }} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="Documentary" />
+                                                <input type="text" value={item.category || ''} onChange={(e) => updateCinemaItem(idx, 'category', e.target.value)} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="Documentary" />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Description</label>
-                                            <textarea value={item.description || ''} onChange={(e) => {
-                                                const items = [...localContent.cinema.items];
-                                                items[idx].description = e.target.value;
-                                                trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                            }} rows={2} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none resize-none" placeholder="A journey to the highest peaks using cinematic drone shots." />
+                                            <textarea value={item.description || ''} onChange={(e) => updateCinemaItem(idx, 'description', e.target.value)} rows={2} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none resize-none" placeholder="A journey to the highest peaks using cinematic drone shots." />
                                         </div>
                                         <div className="mt-4">
                                             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Image URL</label>
-                                            <input type="text" value={item.image || ''} onChange={(e) => {
-                                                const items = [...localContent.cinema.items];
-                                                items[idx].image = e.target.value;
-                                                trackChange({ ...localContent, cinema: { ...localContent.cinema, items } });
-                                            }} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none font-mono text-xs" placeholder="https://..." />
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={item.image || ''}
+                                                    onChange={(e) => updateCinemaItem(idx, 'image', e.target.value)}
+                                                    className="flex-1 bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none font-mono text-xs"
+                                                    placeholder="https://..."
+                                                />
+                                                <button
+                                                    onClick={() => triggerUpload('cinema', idx)}
+                                                    className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/30 text-primary hover:from-primary/30 hover:to-secondary/30 transition-all text-xs font-bold whitespace-nowrap"
+                                                >
+                                                    {uploading === getUploadKey('cinema', idx) ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
+                                                    Upload From Gallery
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex justify-end">
+                                            <button onClick={() => removeCinemaItem(idx)} className="text-red-400 hover:text-red-500 flex items-center gap-2 px-4 py-2 hover:bg-red-500/10 rounded-lg transition-all text-sm font-bold">
+                                                <Trash size={16} /> Remove
+                                            </button>
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="text-sm text-gray-500">No cinematic works yet. Add your first entry above.</div>
+                                )}
                             </div>
                         </div>
                     </motion.div>
@@ -686,11 +797,11 @@ const ContentCMS = () => {
 
                 {activeTab === 'about' && (
                     <motion.div key="about" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-6">
                             <h3 className="text-lg font-bold text-white mb-4">About Section</h3>
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">About Image</label>
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                     <div className="w-32 h-32 rounded-lg overflow-hidden bg-black/30 border border-white/10">
                                         {localContent.about?.image ? <img src={localContent.about.image} alt="About" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-500">No image</div>}
                                     </div>
@@ -709,7 +820,7 @@ const ContentCMS = () => {
                                 <div className="space-y-3">
                                     <div>
                                         <p className="text-xs text-gray-400 mb-2">Metric 1 (e.g., 500+ Polished)</p>
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-col sm:flex-row gap-2">
                                             <input type="number" value={localContent.about?.metrics?.[0] || 0} onChange={(e) => {
                                                 const m = [...(localContent.about?.metrics || [0,0,0])]; m[0]=parseInt(e.target.value||0);
                                                 trackChange({ ...localContent, about: { ...localContent.about, metrics: m } });
@@ -722,7 +833,7 @@ const ContentCMS = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 mb-2">Metric 2 (e.g., 3+ Years)</p>
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-col sm:flex-row gap-2">
                                             <input type="number" value={localContent.about?.metrics?.[1] || 0} onChange={(e) => {
                                                 const m = [...(localContent.about?.metrics || [0,0,0])]; m[1]=parseInt(e.target.value||0);
                                                 trackChange({ ...localContent, about: { ...localContent.about, metrics: m } });
@@ -735,7 +846,7 @@ const ContentCMS = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 mb-2">Metric 3 (e.g., 50M+ Views)</p>
-                                        <div className="flex gap-2">
+                                        <div className="flex flex-col sm:flex-row gap-2">
                                             <input type="number" value={localContent.about?.metrics?.[2] || 0} onChange={(e) => {
                                                 const m = [...(localContent.about?.metrics || [0,0,0])]; m[2]=parseInt(e.target.value||0);
                                                 trackChange({ ...localContent, about: { ...localContent.about, metrics: m } });
@@ -754,10 +865,10 @@ const ContentCMS = () => {
 
                 {activeTab === 'branding' && (
                     <motion.div key="branding" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-6">
                             <h3 className="text-lg font-bold text-white mb-4">Branding & Header Icon</h3>
                             <p className="text-sm text-gray-400 mb-4">Upload an SVG logo; server will generate PNG/WebP variants for favicons and social preview.</p>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                 <div className="w-20 h-20 rounded-lg overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center">
                                     {localContent.headerIcon ? <img src={localContent.headerIcon} alt="Icon" className="w-full h-full object-contain" /> : <div className="text-gray-500">No icon</div>}
                                 </div>
@@ -767,7 +878,7 @@ const ContentCMS = () => {
                                 </div>
                             </div>
                             {localContent.headerIconVariants && (
-                                <div className="grid grid-cols-4 gap-3 mt-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                                     {Object.entries(localContent.headerIconVariants).map(([k,v]) => (
                                         <div key={k} className="bg-[#0a192f] p-2 rounded-lg text-center">
                                             <img src={v} alt={k} className="mx-auto mb-2 w-12 h-12 object-contain" />
@@ -782,7 +893,7 @@ const ContentCMS = () => {
 
                 {activeTab === 'footer' && (
                     <motion.div key="footer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-2xl">
-                        <div className="bg-[#112240]/50 p-8 rounded-3xl border border-white/5 space-y-6">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-6">
                             <h3 className="text-lg font-bold text-white mb-4">Footer Settings</h3>
 
                             <div>
@@ -790,7 +901,7 @@ const ContentCMS = () => {
                                 <input type="text" value={localContent.footer?.copyright || ''} onChange={(e) => trackChange({ ...localContent, footer: { ...localContent.footer, copyright: e.target.value } })} className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="© 2026 Your Name. All rights reserved." />
                             </div>
 
-                            <div className="flex items-center justify-between p-4 bg-[#0a192f] rounded-xl border border-white/10">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-[#0a192f] rounded-xl border border-white/10">
                                 <div>
                                     <p className="text-white font-bold">Show Social Icons in Footer</p>
                                     <p className="text-xs text-gray-500">Display Instagram, YouTube, etc. icons</p>

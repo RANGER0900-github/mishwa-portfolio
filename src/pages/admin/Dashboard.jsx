@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-    Users, Eye, Clock, Globe, TrendingUp, Activity,
+    Users, Eye, Clock, Globe, TrendingUp,
     RefreshCw, ArrowUpRight, Smartphone, Monitor, Zap
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar
+    ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import { Link } from 'react-router-dom';
 
@@ -22,7 +22,10 @@ const Dashboard = () => {
 
     const fetchData = async () => {
         try {
-            const res = await fetch('/api/analytics');
+            const token = localStorage.getItem('adminToken');
+            const res = await fetch('/api/analytics', {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
             const apiData = await res.json();
             setData(apiData);
             setLoading(false);
@@ -44,30 +47,27 @@ const Dashboard = () => {
 
     const visits = data?.visits || [];
     const stats = data?.stats || {};
-    const reelClicks = data?.reelClicks || {};
 
     // Calculate real stats
-    const totalVisits = visits.length;
-    const uniqueVisitors = new Set(visits.map(v => v.ip)).size;
+    const totalVisits = stats.total_visitors ?? visits.length;
+    const uniqueVisitors = stats.unique_visitors ?? new Set(visits.map(v => v.ip)).size;
     const today = new Date().toISOString().slice(0, 10);
-    const todayVisits = visits.filter(v => v.timestamp?.startsWith(today)).length;
+    const todayVisits = stats.today ?? visits.filter(v => v.timestamp?.startsWith(today)).length;
 
     // Average session duration
-    const sessionsWithDuration = visits.filter(v => v.sessionDuration > 0);
-    const avgDuration = sessionsWithDuration.length > 0
-        ? Math.round(sessionsWithDuration.reduce((sum, v) => sum + v.sessionDuration, 0) / sessionsWithDuration.length)
-        : 0;
+    const sessionsWithDuration = visits.filter(v => (Number(v.sessionDuration) || 0) >= 0);
+    const avgDuration = typeof stats.average_session_seconds === 'number'
+        ? Math.max(0, Math.round(stats.average_session_seconds))
+        : (sessionsWithDuration.length > 0
+            ? Math.round(sessionsWithDuration.reduce((sum, v) => sum + (Number(v.sessionDuration) || 0), 0) / sessionsWithDuration.length)
+            : 0);
 
     // Device breakdown
-    const mobileCount = visits.filter(v => v.deviceType === 'mobile').length;
-    const desktopCount = visits.filter(v => v.deviceType === 'desktop').length;
+    const mobileCount = stats.devices?.mobile ?? visits.filter(v => v.deviceType === 'mobile').length;
+    const desktopCount = stats.devices?.desktop ?? visits.filter(v => v.deviceType === 'desktop').length;
 
     // Top countries
-    const countryStats = {};
-    visits.forEach(v => {
-        if (v.country) countryStats[v.country] = (countryStats[v.country] || 0) + 1;
-    });
-    const topCountries = Object.entries(countryStats)
+    const topCountries = Object.entries(stats.countries || {})
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
@@ -82,10 +82,15 @@ const Dashboard = () => {
         return days;
     };
 
-    const chartData = getLast7Days().map(date => ({
-        name: new Date(date).toLocaleDateString('en', { weekday: 'short' }),
-        visits: visits.filter(v => v.timestamp?.startsWith(date)).length
-    }));
+    const chartData = Array.isArray(stats.daily_visits) && stats.daily_visits.length > 0
+        ? stats.daily_visits.map((row) => ({
+            name: new Date(row.date).toLocaleDateString('en', { weekday: 'short' }),
+            visits: row.count
+        }))
+        : getLast7Days().map((date) => ({
+            name: new Date(date).toLocaleDateString('en', { weekday: 'short' }),
+            visits: visits.filter((v) => v.timestamp?.startsWith(date)).length
+        }));
 
     // Device pie chart data
     const deviceData = [
@@ -129,7 +134,7 @@ const Dashboard = () => {
             {/* Header */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-2">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white mb-2">
                         Dashboard<span className="text-secondary">.</span>
                     </h1>
                     <p className="text-gray-400 flex items-center gap-2">
@@ -139,7 +144,7 @@ const Dashboard = () => {
                 </div>
                 <button
                     onClick={fetchData}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-white/20 transition-all"
                 >
                     <RefreshCw size={16} />
                     Refresh
@@ -162,7 +167,7 @@ const Dashboard = () => {
                                 <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{stat.label}</span>
                                 <stat.icon size={18} className="text-gray-500" />
                             </div>
-                            <p className="text-3xl font-display font-black text-white">{stat.value}</p>
+                            <p className="text-2xl sm:text-3xl font-display font-black text-white">{stat.value}</p>
                         </div>
                     </motion.div>
                 ))}
@@ -259,7 +264,7 @@ const Dashboard = () => {
                     </div>
                     <div className="space-y-3">
                         {topCountries.length > 0 ? topCountries.map(([country, count], i) => (
-                            <div key={country} className="flex items-center justify-between">
+                            <div key={country} className="flex items-center justify-between gap-3">
                                 <span className="text-gray-300">{country}</span>
                                 <div className="flex items-center gap-3">
                                     <div className="w-24 h-2 bg-white/5 rounded-full overflow-hidden">
@@ -288,7 +293,7 @@ const Dashboard = () => {
                         <Zap size={18} />
                         Quick Actions
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Link
                             to="/admin/analytics"
                             className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 hover:border-secondary/50 hover:bg-secondary/5 transition-all group"

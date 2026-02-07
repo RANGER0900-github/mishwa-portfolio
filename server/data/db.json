@@ -18,6 +18,16 @@
       "copyright": "© 2026 Mishwa. All rights reserved.",
       "showSocial": false
     },
+    "archiveCategories": [
+      "Beauty & Personal Care",
+      "Food & Beverage",
+      "Fitness & Wellness",
+      "Fashion & Apparel",
+      "Travel & Local experience",
+      "Tech & Gadgets",
+      "Real Estate",
+      "Other"
+    ],
     "projects": [
       {
         "id": 101,
@@ -222,9 +232,8 @@
   "analytics": {
     "visits": [],
     "ip_logs": [],
-    "reelClicks": {
-      "101": 5
-    },
+    "reelClicks": {},
+    "clearedAt": "2026-02-07T11:51:38.501Z",
     "stats": {
       "total_visitors": 0,
       "unique_visitors": 0,
@@ -232,116 +241,36 @@
       "devices": {
         "mobile": 0,
         "desktop": 0
-      }
+      },
+      "average_session_seconds": 0
     }
   },
   "notifications": [
     {
-      "id": "7a2e3737-1589-403c-a7e6-fc694215aa39",
+      "id": "ebd599a5-83bd-4c06-83f4-3f84918feb3e",
       "type": "info",
       "title": "Content Updated",
       "message": "Website content was modified via CMS",
       "ip": null,
-      "timestamp": "2026-01-31T13:45:14.389Z",
+      "timestamp": "2026-02-07T11:54:32.797Z",
       "read": false
     },
     {
-      "id": "547b1bc9-8332-4d03-8d37-ea8f335d8bb7",
-      "type": "info",
-      "title": "Image Uploaded",
-      "message": "New image uploaded: 1769867112612-b9339779.jfif",
-      "ip": null,
-      "timestamp": "2026-01-31T13:45:12.861Z",
+      "id": "6255d29f-0d7d-43aa-a199-2130ea079f04",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "timestamp": "2026-02-07T11:53:21.579Z",
       "read": false
     },
     {
-      "id": "6e88de36-3c71-4238-9d60-67c60fbda01e",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:24:08.555Z",
-      "read": false
-    },
-    {
-      "id": "266edc1b-8606-4df1-b2ed-f8aa47cf1b81",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:24:02.355Z",
-      "read": false
-    },
-    {
-      "id": "3fbc2f7b-9741-4d06-b053-15ebb05c9bdb",
-      "type": "info",
-      "title": "Image Uploaded",
-      "message": "New image uploaded: 1769862239290-5394375f.webp",
-      "ip": null,
-      "timestamp": "2026-01-31T12:23:59.970Z",
-      "read": false
-    },
-    {
-      "id": "e66f4076-9ab1-41c1-9d09-ebba855033d1",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:13:29.788Z",
-      "read": false
-    },
-    {
-      "id": "4eefb98b-56b5-42bb-84e4-72bcc65d6ff2",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:09:08.306Z",
-      "read": false
-    },
-    {
-      "id": "ebf2e33f-dc76-46c7-afbb-46a66737e14c",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:09:00.216Z",
-      "read": false
-    },
-    {
-      "id": "f62bdea9-3cba-4a32-914f-659f0eb88878",
-      "type": "info",
-      "title": "Image Uploaded",
-      "message": "New image uploaded: 1769861336541-528700f1.jfif",
-      "ip": null,
-      "timestamp": "2026-01-31T12:08:56.870Z",
-      "read": false
-    },
-    {
-      "id": "e8d647fb-0ca4-438c-89a1-fbdf1056bbec",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:06:39.639Z",
-      "read": false
-    },
-    {
-      "id": "993193f4-657a-4023-8377-e8c423892bfe",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:04:13.657Z",
-      "read": false
-    },
-    {
-      "id": "7517b569-b036-4f3c-88fd-09fafdff10d4",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-01-31T12:03:55.964Z",
+      "id": "499c82c1-e43b-4d99-b9aa-163c9c8c0d41",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: ::1 with username: admin",
+      "ip": "::1",
+      "timestamp": "2026-02-07T11:53:13.394Z",
       "read": false
     }
   ]

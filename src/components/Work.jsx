@@ -13,12 +13,13 @@ const Work = () => {
         if (project.link) {
             try {
                 // fire-and-forget tracking for reel click
+                const visitId = sessionStorage.getItem('portfolioVisitId');
                 fetch('/api/track/reel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reelId: project.id })
+                    body: JSON.stringify({ reelId: project.id, visitId })
                 }).catch(() => { });
-            } catch (e) { }
+            } catch { }
             window.open(formatExternalLink(project.link), '_blank');
         }
     };

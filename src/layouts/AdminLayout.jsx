@@ -8,6 +8,7 @@ const AdminLayout = () => {
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isValidating, setIsValidating] = useState(true);
+    const [isCompactScreen, setIsCompactScreen] = useState(false);
 
     useEffect(() => {
         const validateToken = async () => {
@@ -47,7 +48,32 @@ const AdminLayout = () => {
         validateToken();
     }, [navigate]);
 
-    const handleLogout = () => {
+    useEffect(() => {
+        const updateScreenType = () => {
+            setIsCompactScreen(window.innerWidth < 480);
+        };
+
+        updateScreenType();
+        window.addEventListener('resize', updateScreenType);
+        return () => window.removeEventListener('resize', updateScreenType);
+    }, []);
+
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [location.pathname]);
+
+    const handleLogout = async () => {
+        const token = localStorage.getItem('adminToken');
+        if (token) {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } catch (error) {
+                // Ignore logout API failures and continue client-side cleanup.
+            }
+        }
         localStorage.removeItem('adminToken');
         navigate('/admin/login');
     };
@@ -81,7 +107,7 @@ const AdminLayout = () => {
             </div>
 
             {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between">
+            <div className={`md:hidden fixed top-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between ${isCompactScreen ? 'px-4 py-3' : 'px-5 py-4'}`}>
                 <h1 className="font-display font-black text-2xl tracking-tighter italic">
                     MISHWA<span className="text-secondary text-3xl">.</span>
                 </h1>
@@ -111,7 +137,7 @@ const AdminLayout = () => {
                 initial={{ x: "-100%" }}
                 animate={{ x: isMobileMenuOpen ? 0 : "-100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="md:hidden fixed top-0 left-0 bottom-0 w-[80%] max-w-sm bg-[#0d1b2a] border-r border-white/10 z-[80] p-8 flex flex-col"
+                className="md:hidden fixed top-0 left-0 bottom-0 w-[88%] max-w-sm bg-[#0d1b2a] border-r border-white/10 z-[80] p-6 flex flex-col"
             >
                 <div className="mb-12">
                     <h1 className="font-display font-black text-3xl tracking-tighter italic">
@@ -127,9 +153,9 @@ const AdminLayout = () => {
                                 key={item.path}
                                 to={item.path}
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${isActive ? 'bg-secondary text-black font-bold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive ? 'bg-secondary text-black font-bold' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                             >
-                                <item.icon size={22} />
+                                <item.icon size={20} />
                                 <span>{item.label}</span>
                             </Link>
                         );
@@ -138,9 +164,9 @@ const AdminLayout = () => {
 
                 <button
                     onClick={handleLogout}
-                    className="flex items-center gap-4 px-6 py-4 text-red-500 hover:bg-red-500/10 rounded-2xl transition-all font-bold mt-auto"
+                    className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-all font-bold mt-auto"
                 >
-                    <LogOut size={22} />
+                    <LogOut size={20} />
                     Logout
                 </button>
             </motion.div>
@@ -194,9 +220,27 @@ const AdminLayout = () => {
 
             {/* Main Content */}
             <div className="flex-1 relative z-10 md:ml-72">
-                <main className="p-8 md:p-12 pt-24 md:pt-12 max-w-[1600px] mx-auto min-h-screen">
+                <main className="p-3 sm:p-6 md:p-10 lg:p-12 pt-20 sm:pt-24 md:pt-10 lg:pt-12 pb-32 sm:pb-28 md:pb-10 max-w-[1600px] mx-auto min-h-screen">
                     <Outlet />
                 </main>
+            </div>
+
+            <div className="md:hidden fixed bottom-2 left-2 right-2 z-[40] bg-[#0d1b2a]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 pb-[calc(env(safe-area-inset-bottom,0)+0.5rem)]">
+                <nav className="flex items-center justify-between gap-1">
+                    {navItems.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link
+                                key={`mobile-${item.path}`}
+                                to={item.path}
+                                className={`min-w-0 flex-1 flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[10px] font-semibold transition-all ${isActive ? 'bg-secondary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            >
+                                <item.icon size={16} />
+                                <span className="truncate max-w-full">{isCompactScreen ? item.label.split(' ')[0] : item.label}</span>
+                            </Link>
+                        );
+                    })}
+                </nav>
             </div>
         </div>
     );
