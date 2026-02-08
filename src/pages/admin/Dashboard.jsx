@@ -14,14 +14,16 @@ import { adminFetch } from '../../utils/adminApi';
 const Dashboard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 15000); // Refresh every 15s
+        fetchData({ silent: true });
+        const interval = setInterval(() => fetchData({ silent: true }), 15000); // Refresh every 15s
         return () => clearInterval(interval);
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = async ({ silent = false } = {}) => {
+        if (!silent) setIsRefreshing(true);
         try {
             const res = await adminFetch('/api/analytics');
             const apiData = await res.json();
@@ -30,6 +32,7 @@ const Dashboard = () => {
             console.error("Dashboard Error:", err);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -141,13 +144,21 @@ const Dashboard = () => {
                         Real-time analytics overview
                     </p>
                 </div>
-                <button
-                    onClick={fetchData}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                <motion.button
+                    whileHover={{ scale: 1.03, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => fetchData()}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:border-secondary/40 hover:bg-secondary/10 transition-all shadow-[0_0_0_rgba(0,243,255,0)] hover:shadow-[0_0_18px_rgba(0,243,255,0.22)]"
                 >
-                    <RefreshCw size={16} />
+                    <motion.span
+                        animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
+                        transition={isRefreshing ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0.2 }}
+                        className="inline-flex"
+                    >
+                        <RefreshCw size={16} />
+                    </motion.span>
                     Refresh
-                </button>
+                </motion.button>
             </header>
 
             {/* Stats Grid */}

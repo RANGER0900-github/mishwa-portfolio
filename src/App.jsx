@@ -17,6 +17,26 @@ const Settings = lazy(() => import('./pages/admin/Settings'));
 const Notifications = lazy(() => import('./pages/admin/Notifications'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
+const createLenisConfig = () => {
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+  return {
+    duration: isTouchDevice ? 0.9 : 1.05,
+    easing: (t) => 1 - Math.pow(1 - t, 4),
+    direction: 'vertical',
+    gestureDirection: 'vertical',
+    smooth: true,
+    smoothTouch: isTouchDevice,
+    syncTouch: isTouchDevice,
+    syncTouchLerp: 0.11,
+    touchMultiplier: isTouchDevice ? 1.08 : 1,
+    wheelMultiplier: isTouchDevice ? 0.9 : 0.95,
+    infinite: false,
+    // Keep nested scrollable areas (tables/modals/dropdowns) native.
+    prevent: (node) => node?.closest?.('[data-lenis-prevent]') ?? false
+  };
+};
+
 const MainContent = () => {
   const { isLoading } = useLoading();
   const location = useLocation();
@@ -36,6 +56,7 @@ const MainContent = () => {
   useEffect(() => {
     if (window.lenis) {
       window.lenis.scrollTo(0, { immediate: true });
+      window.lenis.resize?.();
       return;
     }
     window.scrollTo(0, 0);
@@ -148,18 +169,12 @@ function App() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return undefined;
 
-    const lenis = new Lenis({
-      duration: 1.05,
-      easing: (t) => 1 - Math.pow(1 - t, 4),
-      direction: 'vertical',
-      gestureDirection: 'vertical',
-      smooth: true,
-      smoothTouch: true,
-      syncTouch: true,
-      touchMultiplier: 1.25,
-      wheelMultiplier: 0.95,
-      infinite: false,
-    });
+    if (window.lenis && typeof window.lenis.destroy === 'function') {
+      window.lenis.destroy();
+      window.lenis = null;
+    }
+
+    const lenis = new Lenis(createLenisConfig());
 
     lenisRef.current = lenis;
     window.lenis = lenis;
@@ -172,8 +187,14 @@ function App() {
     }
     rafId = requestAnimationFrame(raf);
 
+    const handleResize = () => {
+      lenis.resize?.();
+    };
+    window.addEventListener('resize', handleResize);
+
     return () => {
       cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
       lenis.destroy();
       lenisRef.current = null;
       if (window.lenis === lenis) {

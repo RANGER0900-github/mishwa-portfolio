@@ -48,6 +48,21 @@ const AdminLayout = () => {
         setIsMobileMenuOpen(false);
     }, [location.pathname]);
 
+    useEffect(() => {
+        if (!window.lenis) return undefined;
+        if (isMobileMenuOpen) {
+            window.lenis.stop();
+        } else {
+            window.lenis.start();
+        }
+
+        return () => {
+            if (window.lenis) {
+                window.lenis.start();
+            }
+        };
+    }, [isMobileMenuOpen]);
+
     const handleLogout = async () => {
         try {
             await adminFetch('/api/logout', { method: 'POST' });

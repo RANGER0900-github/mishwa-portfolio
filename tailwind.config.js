@@ -15,8 +15,8 @@ export default {
         'card-bg': '#112240', // Light Navy
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        display: ['Outfit', 'sans-serif'],
+        sans: ['Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['Trebuchet MS', 'Segoe UI', 'sans-serif'],
       },
       animation: {
         'spin-slow': 'spin 20s linear infinite',
@@ -37,4 +37,3 @@ export default {
   },
   plugins: [],
 }
-

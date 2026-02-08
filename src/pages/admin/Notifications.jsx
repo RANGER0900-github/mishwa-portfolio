@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react';
 import {
     Bell, Shield, AlertTriangle, CheckCircle, XCircle, RefreshCw,
-    Trash2, Filter, Clock, Globe, User, AlertOctagon, Info, ChevronDown
+    Trash2, Filter, Clock, Globe, User, AlertOctagon, Info, ChevronDown, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { adminFetch } from '../../utils/adminApi';
+import { adminFetch, adminJsonFetch } from '../../utils/adminApi';
 
 const Notifications = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [filter, setFilter] = useState('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [appealActionState, setAppealActionState] = useState({});
 
     useEffect(() => {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000);
+        fetchNotifications({ silent: true });
+        const interval = setInterval(() => fetchNotifications({ silent: true }), 30000);
         return () => clearInterval(interval);
     }, []);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async ({ silent = false } = {}) => {
+        if (!silent) setIsRefreshing(true);
         try {
             const res = await adminFetch('/api/notifications');
             const data = await res.json();
@@ -27,6 +30,7 @@ const Notifications = () => {
             console.error('Notifications fetch error:', err);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -63,6 +67,63 @@ const Notifications = () => {
         }
     };
 
+    const handleAppealDecision = async (notification, decision) => {
+        const appealId = notification?.metadata?.appealId;
+        if (!appealId) return;
+
+        setAppealActionState(prev => ({
+            ...prev,
+            [notification.id]: {
+                loading: true,
+                error: '',
+                decision
+            }
+        }));
+
+        try {
+            const { response, data } = await adminJsonFetch(`/api/security/appeals/${appealId}/decision`, {
+                method: 'POST',
+                body: { decision }
+            });
+
+            if (!response.ok || !data?.success) {
+                throw new Error(data?.error || 'Failed to process appeal decision');
+            }
+
+            setNotifications(prev => prev.map((item) => {
+                if (item.id !== notification.id) return item;
+                return {
+                    ...item,
+                    read: true,
+                    metadata: {
+                        ...(item.metadata || {}),
+                        status: 'resolved',
+                        decision
+                    }
+                };
+            }));
+
+            setAppealActionState(prev => ({
+                ...prev,
+                [notification.id]: {
+                    loading: false,
+                    error: '',
+                    decision
+                }
+            }));
+            fetchNotifications({ silent: true });
+        } catch (err) {
+            setAppealActionState(prev => ({
+                ...prev,
+                [notification.id]: {
+                    loading: false,
+                    error: err?.message || 'Failed to process appeal decision',
+                    decision: ''
+                }
+            }));
+        }
+    };
+
     const getIcon = (type) => {
         const icons = {
             'security': Shield,
@@ -71,7 +132,8 @@ const Notifications = () => {
             'error': AlertTriangle,
             'warning': AlertOctagon,
             'info': Info,
-            'visitor': User
+            'visitor': User,
+            'appeal': MessageSquare
         };
         return icons[type] || Bell;
     };
@@ -84,7 +146,8 @@ const Notifications = () => {
             'error': 'text-orange-400 bg-orange-500/10',
             'warning': 'text-yellow-400 bg-yellow-500/10',
             'info': 'text-cyan-400 bg-cyan-500/10',
-            'visitor': 'text-purple-400 bg-purple-500/10'
+            'visitor': 'text-purple-400 bg-purple-500/10',
+            'appeal': 'text-teal-300 bg-teal-500/10'
         };
         return colors[type] || 'text-gray-400 bg-gray-500/10';
     };
@@ -98,7 +161,8 @@ const Notifications = () => {
             'error': 'border-orange-500/30',
             'warning': 'border-yellow-500/30',
             'info': 'border-cyan-500/30',
-            'visitor': 'border-purple-500/30'
+            'visitor': 'border-purple-500/30',
+            'appeal': 'border-teal-500/30'
         };
         return borders[type] || 'border-white/10';
     };
@@ -117,6 +181,7 @@ const Notifications = () => {
         { value: 'security', label: 'Security' },
         { value: 'attack_blocked', label: 'Attacks Blocked' },
         { value: 'attack_failed', label: 'Security Breaches' },
+        { value: 'appeal', label: 'Appeals' },
         { value: 'error', label: 'Errors' },
         { value: 'warning', label: 'Warnings' }
     ];
@@ -204,12 +269,18 @@ const Notifications = () => {
 
                     {/* Refresh */}
                     <motion.button
-                        onClick={fetchNotifications}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-secondary/10 border border-secondary/30 rounded-xl text-secondary hover:bg-secondary/20 transition-all"
-                        whileHover={{ scale: 1.02 }}
+                        onClick={() => fetchNotifications()}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-secondary/10 border border-secondary/30 rounded-xl text-secondary hover:bg-secondary/20 hover:border-secondary/50 transition-all shadow-[0_0_0_rgba(0,243,255,0)] hover:shadow-[0_0_18px_rgba(0,243,255,0.22)]"
+                        whileHover={{ scale: 1.03, y: -1 }}
                         whileTap={{ scale: 0.98 }}
                     >
-                        <RefreshCw size={16} />
+                        <motion.span
+                            animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
+                            transition={isRefreshing ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0.2 }}
+                            className="inline-flex"
+                        >
+                            <RefreshCw size={16} />
+                        </motion.span>
                         Refresh
                     </motion.button>
                 </div>
@@ -255,6 +326,10 @@ const Notifications = () => {
                         const Icon = getIcon(notification.type);
                         const colorClass = getColor(notification.type);
                         const borderClass = getBorderColor(notification.type, notification.read);
+                        const isAppeal = notification.type === 'appeal' && notification?.metadata?.appealId;
+                        const appealStatus = notification?.metadata?.status || 'pending';
+                        const appealDecision = notification?.metadata?.decision || null;
+                        const appealState = appealActionState[notification.id] || { loading: false, error: '', decision: '' };
 
                         return (
                             <motion.div
@@ -273,6 +348,15 @@ const Notifications = () => {
                                             <h4 className={`font-bold ${notification.read ? 'text-gray-300' : 'text-white'}`}>
                                                 {notification.title}
                                             </h4>
+                                            {isAppeal && (
+                                                <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                                    appealStatus === 'resolved'
+                                                        ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
+                                                        : 'text-amber-300 border-amber-500/40 bg-amber-500/10'
+                                                }`}>
+                                                    {appealStatus === 'resolved' ? `resolved${appealDecision ? `: ${appealDecision}` : ''}` : 'pending review'}
+                                                </span>
+                                            )}
                                             {!notification.read && (
                                                 <span className="w-2 h-2 bg-secondary rounded-full"></span>
                                             )}
@@ -290,6 +374,33 @@ const Notifications = () => {
                                                 </span>
                                             )}
                                         </div>
+                                        {isAppeal && appealStatus !== 'resolved' && (
+                                            <div className="mt-3 flex flex-col gap-2">
+                                                <div className="flex flex-wrap gap-2">
+                                                    <motion.button
+                                                        onClick={() => handleAppealDecision(notification, 'unblock')}
+                                                        disabled={appealState.loading}
+                                                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                        whileHover={{ scale: appealState.loading ? 1 : 1.02 }}
+                                                        whileTap={{ scale: appealState.loading ? 1 : 0.98 }}
+                                                    >
+                                                        {appealState.loading && appealState.decision === 'unblock' ? 'Processing...' : 'Unblock IP'}
+                                                    </motion.button>
+                                                    <motion.button
+                                                        onClick={() => handleAppealDecision(notification, 'keep')}
+                                                        disabled={appealState.loading}
+                                                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 hover:bg-amber-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                        whileHover={{ scale: appealState.loading ? 1 : 1.02 }}
+                                                        whileTap={{ scale: appealState.loading ? 1 : 0.98 }}
+                                                    >
+                                                        {appealState.loading && appealState.decision === 'keep' ? 'Processing...' : 'Keep Blocked'}
+                                                    </motion.button>
+                                                </div>
+                                                {appealState.error && (
+                                                    <p className="text-xs text-red-300">{appealState.error}</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                         {!notification.read && (

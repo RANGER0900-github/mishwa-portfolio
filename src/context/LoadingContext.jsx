@@ -1,10 +1,12 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useContent } from './ContentContext';
 
 const LoadingContext = createContext();
-const MAX_BLOCKING_PRELOAD_MS = 14000;
-const PER_IMAGE_TIMEOUT_MS = 9000;
+const MAX_BLOCKING_PRELOAD_MS = 5000;
+const PER_IMAGE_TIMEOUT_MS = 7000;
 const MAX_PARALLEL_PRELOADS = 6;
+const MAX_BLOCKING_ASSETS = 10;
+const MAX_TOTAL_LOADING_MS = 15000;
 
 const STATIC_ASSETS = [
     '/images/mishwa_portrait.png',
@@ -19,7 +21,6 @@ const isLikelyImageUrl = (value) => {
     if (!value || typeof value !== 'string') return false;
     if (value.startsWith('data:image/')) return true;
     if (value.startsWith('/images/')) return true;
-    if (/^https?:\/\//i.test(value)) return true;
     return /\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i.test(value);
 };
 
@@ -41,6 +42,24 @@ const collectImageAssets = (content) => {
     (content.reviews || []).forEach((review) => pushIfImage(review.image));
 
     return [...assets];
+};
+
+const collectCriticalAssets = (content) => {
+    const critical = new Set(STATIC_ASSETS);
+    if (!content) return [...critical];
+
+    const add = (value) => {
+        if (typeof value !== 'string' || !value.trim()) return;
+        critical.add(value.trim());
+    };
+
+    add(content.about?.image);
+    (content.projects || []).slice(0, 4).forEach((project) => add(project.image));
+    (content.cinema?.items || []).slice(0, 2).forEach((item) => add(item.image));
+    (content.reviews || []).slice(0, 2).forEach((review) => add(review.image));
+    add(content.headerIcon);
+
+    return Array.from(critical).slice(0, MAX_BLOCKING_ASSETS);
 };
 
 const preloadImage = (src, timeoutMs = PER_IMAGE_TIMEOUT_MS) => (
@@ -66,11 +85,10 @@ const preloadImage = (src, timeoutMs = PER_IMAGE_TIMEOUT_MS) => (
     })
 );
 
-const preloadInBatches = async (urls, onProgress) => {
+const preloadInBatches = async (urls, onLoaded) => {
     if (!urls.length) return;
 
     let pointer = 0;
-    let completed = 0;
 
     const worker = async () => {
         while (pointer < urls.length) {
@@ -78,8 +96,7 @@ const preloadInBatches = async (urls, onProgress) => {
             pointer += 1;
             const src = urls[index];
             await preloadImage(src);
-            completed += 1;
-            onProgress(completed);
+            onLoaded(src);
         }
     };
 
@@ -95,44 +112,68 @@ export const LoadingProvider = ({ children }) => {
     const [totalAssets, setTotalAssets] = useState(0);
     const [loadingLabel, setLoadingLabel] = useState('Preparing startup');
     const { loading: contentLoading, content } = useContent();
-    const [bootstrapped, setBootstrapped] = useState(false);
+    const startedRef = useRef(false);
+    const contentRef = useRef(content);
 
     useEffect(() => {
-        if (contentLoading || bootstrapped) return;
-        setBootstrapped(true);
+        contentRef.current = content;
+    }, [content]);
 
-        let isCancelled = false;
-        const assetUrls = collectImageAssets(content);
+    useEffect(() => {
+        if (contentLoading || startedRef.current) return;
+        startedRef.current = true;
+
+        let isActive = true;
+        const snapshot = contentRef.current;
+        const assetUrls = collectImageAssets(snapshot);
+        const criticalUrls = collectCriticalAssets(snapshot);
         const dedupedUrls = Array.from(new Set(assetUrls));
+        const loadedUrls = new Set();
         setTotalAssets(dedupedUrls.length);
         setLoadedAssets(0);
         setLoadingLabel('Loading media assets');
 
-        const fontsReadyPromise = document.fonts?.ready
-            ? document.fonts.ready.catch(() => undefined)
-            : Promise.resolve();
+        const markLoaded = (src) => {
+            if (!isActive || loadedUrls.has(src)) return;
+            loadedUrls.add(src);
+            setLoadedAssets(loadedUrls.size);
+        };
 
-        const preloadPromise = preloadInBatches(dedupedUrls, (count) => {
-            if (isCancelled) return;
-            setLoadedAssets(count);
-        });
+        const blockingPromise = preloadInBatches(criticalUrls, markLoaded);
 
         const timeoutPromise = new Promise((resolve) => {
             setTimeout(() => resolve('timeout'), MAX_BLOCKING_PRELOAD_MS);
         });
 
-        Promise.race([Promise.all([preloadPromise, fontsReadyPromise]), timeoutPromise]).then(() => {
-            if (isCancelled) return;
+        Promise.race([blockingPromise, timeoutPromise]).then(() => {
+            if (!isActive) return;
             setLoadingLabel('Finalizing experience');
             setTimeout(() => {
-                if (!isCancelled) setIsLoading(false);
+                if (isActive) setIsLoading(false);
             }, 250);
+
+            const remaining = dedupedUrls.filter((src) => !loadedUrls.has(src));
+            if (remaining.length > 0) {
+                setLoadingLabel('Warming remaining assets');
+                preloadInBatches(remaining, markLoaded).catch(() => undefined);
+            }
         });
 
         return () => {
-            isCancelled = true;
+            isActive = false;
         };
-    }, [bootstrapped, content, contentLoading]);
+    }, [contentLoading]);
+
+    useEffect(() => {
+        if (!isLoading) return;
+
+        const watchdog = setTimeout(() => {
+            setLoadingLabel('Starting experience');
+            setIsLoading(false);
+        }, MAX_TOTAL_LOADING_MS);
+
+        return () => clearTimeout(watchdog);
+    }, [isLoading]);
 
     return (
         <LoadingContext.Provider

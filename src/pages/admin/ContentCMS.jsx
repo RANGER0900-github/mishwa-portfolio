@@ -335,6 +335,7 @@ const ContentCMS = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                data-lenis-prevent
                 className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto"
                 onClick={onClose}
             >
@@ -605,6 +606,7 @@ const ContentCMS = () => {
                                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                                             exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                                             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                                                            data-lenis-prevent
                                                             className="absolute top-full left-0 right-0 mt-3 z-50 max-h-[300px] overflow-y-auto p-2 bg-[#0a192f] border border-white/10 rounded-xl"
                                                             onClick={(e) => e.stopPropagation()}
                                                             onWheel={(e) => e.stopPropagation()}

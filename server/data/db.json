@@ -233,7 +233,12 @@
     "visits": [],
     "ip_logs": [],
     "reelClicks": {},
-    "clearedAt": "2026-02-07T11:51:38.501Z",
+    "sessionDurations": {
+      "8a0b14b3-ee50-4a15-8517-c9d97ca5a327": 156,
+      "230fcb1a-1b26-4ed8-9126-00abdedd1951": 102,
+      "ea0036fc-024b-467f-a132-793be2505399": 190
+    },
+    "clearedAt": "2026-02-08T09:58:24.499Z",
     "stats": {
       "total_visitors": 0,
       "unique_visitors": 0,
@@ -245,33 +250,243 @@
       "average_session_seconds": 0
     }
   },
-  "notifications": [
+  "notifications": [],
+  "contentHistory": [
     {
-      "id": "ebd599a5-83bd-4c06-83f4-3f84918feb3e",
-      "type": "info",
-      "title": "Content Updated",
-      "message": "Website content was modified via CMS",
-      "ip": null,
-      "timestamp": "2026-02-07T11:54:32.797Z",
-      "read": false
-    },
-    {
-      "id": "6255d29f-0d7d-43aa-a199-2130ea079f04",
-      "type": "security",
-      "title": "Login Success",
-      "message": "Admin login from IP: ::1",
-      "ip": "::1",
-      "timestamp": "2026-02-07T11:53:21.579Z",
-      "read": false
-    },
-    {
-      "id": "499c82c1-e43b-4d99-b9aa-163c9c8c0d41",
-      "type": "warning",
-      "title": "Failed Login Attempt",
-      "message": "Failed login attempt from IP: ::1 with username: admin",
-      "ip": "::1",
-      "timestamp": "2026-02-07T11:53:13.394Z",
-      "read": false
+      "id": "f3670975-15f4-4db1-a9b8-e7fc66f150db",
+      "timestamp": "2026-02-08T09:58:41.513Z",
+      "action": "content_update",
+      "actorIp": "::1",
+      "content": {
+        "hero": {
+          "title": "MISHWA.",
+          "subtitle": "VIDEO EDITOR & VISUAL ARTIST",
+          "description": "Crafting scroll-stopping narratives for the digital age. Specializing in high-retention Instagram Reels and cinematic storytelling.",
+          "buttonText": "View Portfolio"
+        },
+        "social": {
+          "email": "mishwa@example.com",
+          "instagram": "https://instagram.com/mishwazalavadiya"
+        },
+        "footer": {
+          "copyright": "© 2026 Mishwa. All rights reserved.",
+          "showSocial": false
+        },
+        "archiveCategories": [
+          "Beauty & Personal Care",
+          "Food & Beverage",
+          "Fitness & Wellness",
+          "Fashion & Apparel",
+          "Travel & Local experience",
+          "Tech & Gadgets",
+          "Real Estate",
+          "Other"
+        ],
+        "projects": [
+          {
+            "id": 101,
+            "title": "Glow Routines",
+            "category": "Beauty & Personal Care",
+            "image": "https://i.ytimg.com/vi/aVLwDefz5pY/maxresdefault.jpg",
+            "orientation": "portrait",
+            "link": "google.com",
+            "textColor": "#00ffff",
+            "textPosition": {
+              "x": 50,
+              "y": 85
+            }
+          },
+          {
+            "id": 102,
+            "title": "Bali Villas",
+            "category": "Travel & Local experience",
+            "image": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape",
+            "textColor": "#ffffff"
+          },
+          {
+            "id": 103,
+            "title": "Summer Shades",
+            "category": "Fashion & Apparel",
+            "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
+            "orientation": "portrait",
+            "textColor": "#ffffff"
+          },
+          {
+            "id": 104,
+            "title": "Espresso Art",
+            "category": "Food & Beverage",
+            "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 105,
+            "title": "Crossfit Power",
+            "category": "Fitness & Wellness",
+            "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 106,
+            "title": "Skincare Essentials",
+            "category": "Beauty & Personal Care",
+            "image": "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          },
+          {
+            "id": 107,
+            "title": "Streetwear 2024",
+            "category": "Fashion & Apparel",
+            "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          },
+          {
+            "id": 108,
+            "title": "Island Life",
+            "category": "Travel & Local experience",
+            "image": "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          },
+          {
+            "id": 109,
+            "title": "Sushi Master",
+            "category": "Food & Beverage",
+            "image": "https://images.unsplash.com/photo-1579584425555-c3ce17fd43ea?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 110,
+            "title": "Yoga Flow",
+            "category": "Fitness & Wellness",
+            "image": "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          },
+          {
+            "id": 111,
+            "title": "Makeup Mastery",
+            "category": "Beauty & Personal Care",
+            "image": "https://images.unsplash.com/photo-1522335789203-abd1aaccd158?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 112,
+            "title": "Vintage Vibes",
+            "category": "Fashion & Apparel",
+            "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 113,
+            "title": "Parisian Streets",
+            "category": "Travel & Local experience",
+            "image": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 114,
+            "title": "Burger Bliss",
+            "category": "Food & Beverage",
+            "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 115,
+            "title": "Gym Rat",
+            "category": "Fitness & Wellness",
+            "image": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          },
+          {
+            "id": 116,
+            "title": "Mountain Peak",
+            "category": "Travel & Local experience",
+            "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 117,
+            "title": "Healthy Greens",
+            "category": "Food & Beverage",
+            "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          },
+          {
+            "id": 118,
+            "title": "Spa Day",
+            "category": "Beauty & Personal Care",
+            "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1200&auto=format&fit=crop",
+            "orientation": "landscape"
+          },
+          {
+            "id": 119,
+            "title": "Urban Style",
+            "category": "Fashion & Apparel",
+            "image": "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=800&auto=format&fit=crop",
+            "orientation": "portrait"
+          }
+        ],
+        "about": {
+          "metrics": [
+            500,
+            3,
+            1200000
+          ],
+          "metricLabels": [
+            "Polished",
+            "Years",
+            "Views"
+          ],
+          "text": "I am a creative video editor",
+          "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769867112612-b9339779.jfif"
+        },
+        "cinema": {
+          "title": "Long Form Works",
+          "subtitle": "Cinematic",
+          "items": [
+            {
+              "id": 1,
+              "title": "The Summit",
+              "category": "Documentary",
+              "description": "A journey to the highest peaks using cinematic drone shots.",
+              "image": "/images/cinematic_thumbnail_1.png"
+            },
+            {
+              "id": 2,
+              "title": "Velocity",
+              "category": "Commercial",
+              "description": "High-speed automotive commercial featuring dynamic ramping.",
+              "image": "https://i.postimg.cc/mg0LGwRL/da0c007b4bb5cd942a039d3eab55ef4f.jpg"
+            }
+          ]
+        },
+        "reviews": [
+          {
+            "id": 1,
+            "name": "Alex Creator",
+            "role": "YouTuber (1M+)",
+            "text": "Mishwa's editing took my channel to the next level. Retention rates skyrocketed!",
+            "image": "https://randomuser.me/api/portraits/men/32.jpg"
+          },
+          {
+            "id": 2,
+            "name": "Sarah Fitness",
+            "role": "Instagram Coach",
+            "text": "Fast turnaround and incredible attention to detail. The best investment for my brand.",
+            "image": "https://randomuser.me/api/portraits/women/44.jpg"
+          },
+          {
+            "id": 3,
+            "name": "TechDaily",
+            "role": "Tech Reviewer",
+            "text": "She just gets the vibe immediately. No revision needed. Pure magic.",
+            "image": "https://randomuser.me/api/portraits/men/85.jpg"
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "security": {
+    "blockedIps": {},
+    "appeals": []
+  }
 }

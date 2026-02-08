@@ -77,12 +77,19 @@ const sanitizeString = (str, maxLength = 500) => {
 
 // Storage configuration (Redis + in-memory fallback)
 const REDIS_URL = process.env.REDIS_URL || '';
+const REDIS_ENABLED = Boolean(REDIS_URL);
 const SESSION_COOKIE_NAME = process.env.ADMIN_SESSION_COOKIE || 'admin_session';
 const SESSION_SECRET = process.env.SESSION_SECRET || process.env.COOKIE_SECRET || 'dev-session-secret-change-me';
 const SESSION_COOKIE_SECURE = (process.env.SESSION_COOKIE_SECURE || '').toLowerCase() === 'true' || process.env.NODE_ENV === 'production';
 const CONTENT_HISTORY_LIMIT = Math.max(10, parseInt(process.env.CONTENT_HISTORY_LIMIT || '40', 10));
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const BLOCKED_IPS = new Set();
+const RATE_LIMIT_VIOLATION_WINDOW_MS = 10 * 60 * 1000;
+const TEMP_BLOCK_DURATION_MS = 20 * 60 * 1000;
+const RATE_LIMIT_BLOCK_THRESHOLD = 6;
+const MALICIOUS_INPUT_BLOCK_THRESHOLD = 3;
+const GEO_CACHE_TTL_MS = 30 * 60 * 1000;
+const APPEAL_MIN_INTERVAL_MS = 2 * 60 * 1000;
+const BLOCKED_IPS = new Map();
 const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 const LOGIN_LOCK_WINDOW_MS = 15 * 60 * 1000; // 15 min
 const LOGIN_LOCK_DURATION_MS = 15 * 60 * 1000; // 15 min
@@ -91,22 +98,30 @@ const LOGIN_LOCK_THRESHOLD = 5;
 const memoryRateLimitStore = new Map();
 const memorySessionStore = new Map();
 const memoryLoginAttempts = new Map();
+const memoryRateLimitViolations = new Map();
+const memoryMaliciousInputAttempts = new Map();
+const memoryAppealSubmissions = new Map();
+const geoDataCache = new Map();
 let redisClient = null;
 let redisConnected = false;
+let redisStatus = REDIS_ENABLED ? 'connecting' : 'disabled';
 let analyticsCache = { timestamp: 0, key: '', visits: [] };
 
-if (REDIS_URL) {
+if (REDIS_ENABLED) {
     redisClient = createRedisClient({ url: REDIS_URL });
     redisClient.on('error', (error) => {
         redisConnected = false;
+        redisStatus = 'error';
         console.warn('Redis error:', error.message);
     });
     redisClient.on('ready', () => {
         redisConnected = true;
+        redisStatus = 'connected';
         console.log('Redis connected.');
     });
     redisClient.connect().catch((error) => {
         redisConnected = false;
+        redisStatus = 'fallback-memory';
         console.warn('Redis connection failed, using in-memory fallback:', error.message);
     });
 }
@@ -118,6 +133,7 @@ const getLoginAttemptKey = (key) => `login_attempt:${key}`;
 
 const RATE_LIMIT_RULES = [
     { name: 'login', match: (req) => req.path === '/api/login', max: 10 },
+    { name: 'appeal', match: (req) => req.path.startsWith('/api/security/appeal'), max: 30 },
     { name: 'settings', match: (req) => req.path.startsWith('/api/settings'), max: 20 },
     { name: 'admin_write', match: (req) => req.path.startsWith('/api/content') || req.path.startsWith('/api/upload') || req.path.startsWith('/api/notifications'), max: 80 },
     { name: 'tracking', match: (req) => req.path.startsWith('/api/track'), max: 240 },
@@ -133,6 +149,25 @@ const SECURITY_PATTERNS = [
     /(\.\.\/|\.\.\\)/g
 ];
 
+const SQL_INJECTION_PATTERNS = [
+    /\bunion\b[\s\S]{0,40}\bselect\b/i,
+    /\bselect\b[\s\S]{0,40}\bfrom\b/i,
+    /\b(insert|update|delete|drop|truncate|alter)\b[\s\S]{0,40}\b(table|into|set)\b/i,
+    /\b(or|and)\b\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/i,
+    /\b(sleep|benchmark)\s*\(/i,
+    /--\s*$/m
+];
+
+const COMMAND_INJECTION_PATTERNS = [
+    /(?:^|[\s;&|`])(?:cat|ls|pwd|bash|sh|cmd|powershell|wget|curl|nc|ncat)\b/i,
+    /\|\s*(?:bash|sh|powershell|cmd)\b/i
+];
+
+const NOSQL_OPERATOR_KEYS = new Set([
+    '$where', '$ne', '$gt', '$gte', '$lt', '$lte', '$regex', '$or', '$and', '$nor', '$not', '$expr',
+    '__proto__', 'prototype', 'constructor'
+]);
+
 // Security headers
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -145,10 +180,285 @@ app.use((req, res, next) => {
     }
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none';"
+        "default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; frame-ancestors 'none';"
     );
     next();
 });
+
+const registerIncident = (store, ip, windowMs) => {
+    const now = Date.now();
+    const existing = store.get(ip);
+    if (!existing || (now - existing.firstSeenAt) > windowMs) {
+        store.set(ip, { count: 1, firstSeenAt: now, lastSeenAt: now });
+        return 1;
+    }
+
+    const updated = { ...existing, count: existing.count + 1, lastSeenAt: now };
+    store.set(ip, updated);
+    return updated.count;
+};
+
+const persistBlockedIp = (ip, payload) => {
+    try {
+        const db = readDB();
+        if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
+        if (!db.security.blockedIps || typeof db.security.blockedIps !== 'object') db.security.blockedIps = {};
+        db.security.blockedIps[ip] = payload;
+        writeDB(db);
+    } catch (error) {
+        console.warn('Failed to persist blocked IP state:', error.message);
+    }
+};
+
+const removePersistedBlockedIp = (ip) => {
+    try {
+        const db = readDB();
+        if (!db.security?.blockedIps?.[ip]) return;
+        delete db.security.blockedIps[ip];
+        writeDB(db);
+    } catch (error) {
+        console.warn('Failed to remove persisted blocked IP state:', error.message);
+    }
+};
+
+const blockIpTemporarily = (ip, durationMs = TEMP_BLOCK_DURATION_MS, reason = 'Suspicious traffic detected') => {
+    const blockedUntil = Date.now() + durationMs;
+    const payload = {
+        blockedUntil,
+        reason,
+        source: 'auto',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    BLOCKED_IPS.set(ip, payload);
+    persistBlockedIp(ip, payload);
+    return payload;
+};
+
+const unblockIp = (ip) => {
+    BLOCKED_IPS.delete(ip);
+    removePersistedBlockedIp(ip);
+};
+
+const getIpBlockStatus = (ip) => {
+    const payload = BLOCKED_IPS.get(ip);
+    if (!payload) return { blocked: false, remainingMs: 0, reason: null, blockedUntil: null };
+    const blockedUntil = typeof payload === 'number' ? payload : Number(payload.blockedUntil);
+    if (!blockedUntil || blockedUntil <= Date.now()) {
+        unblockIp(ip);
+        return { blocked: false, remainingMs: 0 };
+    }
+    const reason = typeof payload === 'number' ? 'Security policy triggered' : (payload.reason || 'Security policy triggered');
+    return { blocked: true, remainingMs: blockedUntil - Date.now(), blockedUntil, reason };
+};
+
+const isLocalOrPrivateIp = (ip = '') => {
+    if (!ip) return true;
+    const normalized = ip.replace('::ffff:', '').trim();
+    return normalized === '::1'
+        || normalized === '127.0.0.1'
+        || normalized === 'localhost'
+        || normalized.startsWith('10.')
+        || normalized.startsWith('192.168.')
+        || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(normalized)
+        || normalized.startsWith('fc')
+        || normalized.startsWith('fd');
+};
+
+const getGeoDataCached = async (ip) => {
+    if (!ip || isLocalOrPrivateIp(ip)) return null;
+
+    const cached = geoDataCache.get(ip);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now) {
+        return cached.value;
+    }
+
+    const geo = await fetchGeoData(ip);
+    geoDataCache.set(ip, { value: geo, expiresAt: now + GEO_CACHE_TTL_MS });
+    return geo;
+};
+
+const buildAttackGeoSummary = (geo) => {
+    if (!geo) return null;
+    return `Geo: ${geo.city || 'Unknown'}, ${geo.country || 'Unknown'} | Region: ${geo.region || 'Unknown'} | ISP: ${geo.isp || 'Unknown'} | VPN: ${geo.isVpn ? 'yes' : 'no'} | Connection: ${geo.connectionType || 'unknown'}`;
+};
+
+const logAttackNotification = async ({ type = 'attack_blocked', title, message, ip }) => {
+    try {
+        const geo = await getGeoDataCached(ip);
+        const geoSummary = buildAttackGeoSummary(geo);
+        const finalMessage = geoSummary ? `${message} | ${geoSummary}` : message;
+        logNotification(type, title, sanitizeString(finalMessage, 450), ip || null);
+    } catch (error) {
+        logNotification(type, title, sanitizeString(message, 450), ip || null);
+    }
+};
+
+const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const renderBlockedPage = ({ reason, blockedUntil, remainingMs }) => {
+    const safeReason = escapeHtml(reason || 'Suspicious traffic was detected from your network.');
+    const blockedUntilIso = new Date(blockedUntil || Date.now()).toISOString();
+    const remainingSeconds = Math.max(1, Math.ceil((remainingMs || 0) / 1000));
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Temporarily Blocked</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: radial-gradient(circle at 20% 0%, #123c4a 0%, #020c1b 55%);
+      color: #dbe7f3;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(92vw, 700px);
+      background: rgba(7, 19, 34, 0.92);
+      border: 1px solid rgba(100, 255, 218, 0.28);
+      border-radius: 22px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      padding: 28px;
+      backdrop-filter: blur(10px);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(0, 243, 255, 0.45);
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: #8ff3ff;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 14px 0 8px; font-size: 30px; line-height: 1.15; }
+    p { color: #9fb2c7; margin: 0 0 10px; }
+    .reason {
+      margin-top: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 12px;
+      color: #f5fbff;
+    }
+    .timer {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #64ffda;
+      font-weight: 700;
+    }
+    form {
+      margin-top: 20px;
+      display: grid;
+      gap: 10px;
+    }
+    textarea, input {
+      width: 100%;
+      background: rgba(2, 12, 27, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #e7f3ff;
+      border-radius: 12px;
+      padding: 12px;
+      outline: none;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea:focus, input:focus { border-color: rgba(100, 255, 218, 0.8); }
+    button {
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      background: linear-gradient(120deg, rgba(0, 243, 255, 0.2), rgba(100, 255, 218, 0.2));
+      color: #ccfcff;
+      font-weight: 700;
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0, 243, 255, 0.18); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .msg { min-height: 20px; font-size: 13px; }
+    .ok { color: #6ef0c3; }
+    .err { color: #ff8a8a; }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <span class="pill">Security Protection Active</span>
+    <h1>Access Temporarily Blocked</h1>
+    <p>Your IP has been temporarily blocked to protect this website.</p>
+    <div class="reason"><strong>Reason:</strong> ${safeReason}</div>
+    <div class="timer" id="timer" data-remaining="${remainingSeconds}" data-until="${blockedUntilIso}"></div>
+
+    <form id="appeal-form">
+      <textarea id="appeal-message" rows="4" maxlength="450" placeholder="Explain why this block should be removed..." required></textarea>
+      <input id="appeal-contact" type="text" maxlength="120" placeholder="Optional contact (email/username)" />
+      <button id="appeal-submit" type="submit">Submit Unban Request</button>
+      <div id="appeal-result" class="msg"></div>
+    </form>
+  </section>
+  <script>
+    (function () {
+      const timerEl = document.getElementById('timer');
+      const until = new Date(timerEl.dataset.until).getTime();
+      const tick = () => {
+        const left = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+        const min = Math.floor(left / 60);
+        const sec = left % 60;
+        timerEl.textContent = left > 0 ? ('Estimated unblock in ' + min + 'm ' + sec + 's') : 'Block should expire soon. Please refresh.';
+      };
+      tick();
+      setInterval(tick, 1000);
+
+      const form = document.getElementById('appeal-form');
+      const submit = document.getElementById('appeal-submit');
+      const result = document.getElementById('appeal-result');
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        result.textContent = '';
+        result.className = 'msg';
+        submit.disabled = true;
+        try {
+          const payload = {
+            message: document.getElementById('appeal-message').value.trim(),
+            contact: document.getElementById('appeal-contact').value.trim()
+          };
+          const res = await fetch('/api/security/appeal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) throw new Error(data.error || 'Failed to submit appeal');
+          result.textContent = 'Appeal submitted. Admin will review your request.';
+          result.classList.add('ok');
+          form.reset();
+        } catch (error) {
+          result.textContent = error.message || 'Appeal failed. Please retry.';
+          result.classList.add('err');
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>`;
+};
 
 const appendRateLimitHit = async (key, windowMs) => {
     const now = Date.now();
@@ -252,10 +562,37 @@ const getLoginBackoffMs = (failedAttempts) => {
 // Rate limiter
 const rateLimiter = async (req, res, next) => {
     const ip = getClientIP(req);
+    const blockStatus = getIpBlockStatus(ip);
+    const isSecurityAppealRoute = req.path === '/api/security/appeal' || req.path === '/api/security/block-status';
 
-    if (BLOCKED_IPS.has(ip)) {
-        logNotification('attack_blocked', 'Blocked IP Attempt', `Blocked request from banned IP: ${ip}`, ip);
-        return res.status(403).json({ error: 'Access denied' });
+    if (blockStatus.blocked) {
+        if (isSecurityAppealRoute) {
+            return next();
+        }
+
+        const remainingMinutes = Math.max(1, Math.ceil(blockStatus.remainingMs / (60 * 1000)));
+        void logAttackNotification({
+            type: 'attack_blocked',
+            title: 'Blocked IP Attempt',
+            message: `Blocked request from temporarily banned IP. reason="${blockStatus.reason || 'security policy'}", remaining=${remainingMinutes} minute(s).`,
+            ip
+        });
+
+        if (req.path.startsWith('/api/')) {
+            return res.status(403).json({
+                blocked: true,
+                error: 'Access denied. IP temporarily blocked due to abusive traffic.',
+                reason: blockStatus.reason || 'Security policy triggered',
+                blockedUntil: blockStatus.blockedUntil || null,
+                remainingSeconds: Math.max(1, Math.ceil(blockStatus.remainingMs / 1000))
+            });
+        }
+
+        return res.status(403).type('html').send(renderBlockedPage({
+            reason: blockStatus.reason,
+            blockedUntil: blockStatus.blockedUntil,
+            remainingMs: blockStatus.remainingMs
+        }));
     }
 
     const matchedRule = RATE_LIMIT_RULES.find((rule) => rule.match(req)) || RATE_LIMIT_RULES[RATE_LIMIT_RULES.length - 1];
@@ -269,7 +606,24 @@ const rateLimiter = async (req, res, next) => {
     }
 
     if (requestCount > matchedRule.max) {
-        logNotification('attack_blocked', 'Rate Limit Exceeded', `IP ${ip} exceeded rate limit`, ip);
+        const violationCount = registerIncident(memoryRateLimitViolations, ip, RATE_LIMIT_VIOLATION_WINDOW_MS);
+        if (violationCount >= RATE_LIMIT_BLOCK_THRESHOLD) {
+            const blockPayload = blockIpTemporarily(ip, TEMP_BLOCK_DURATION_MS, 'Repeated rate-limit violations / possible DoS pattern');
+            void logAttackNotification({
+                type: 'attack_blocked',
+                title: 'IP Auto-Blocked (DoS Protection)',
+                message: `IP exceeded rate limit repeatedly. Rule=${matchedRule.name}, requests=${requestCount}, violations=${violationCount}, blockedUntil=${new Date(blockPayload.blockedUntil).toISOString()}`,
+                ip
+            });
+            return res.status(429).json({ error: 'Too many requests. IP temporarily blocked due to repeated abuse.' });
+        }
+
+        void logAttackNotification({
+            type: 'attack_blocked',
+            title: 'Rate Limit Exceeded',
+            message: `IP exceeded rate limit for rule=${matchedRule.name}. requests=${requestCount}, violations=${violationCount}/${RATE_LIMIT_BLOCK_THRESHOLD}`,
+            ip
+        });
         return res.status(429).json({ error: 'Too many requests. Please slow down.' });
     }
 
@@ -279,38 +633,54 @@ const rateLimiter = async (req, res, next) => {
 // Input sanitizer - Smart version that allows common content
 const sanitizeInput = (req, res, next) => {
     const ip = getClientIP(req);
-    
-    // Skip sanitization for endpoints that intentionally accept rich/admin payloads.
-    const skipPrefixes = ['/api/track', '/api/login', '/api/content', '/api/upload', '/api/settings', '/api/notifications', '/api/validate-token', '/api/logout', '/api/analytics'];
+
+    // Skip heavy binary-like payloads and tracking endpoints.
+    const skipPrefixes = ['/api/track', '/api/upload/header-icon', '/api/content', '/api/security/appeal', '/api/security/block-status'];
     if (skipPrefixes.some((prefix) => req.path.startsWith(prefix))) {
         return next();
     }
-    
+
+    let detection = null;
+
     const checkString = (str, path) => {
         if (typeof str !== 'string') return false;
-        const matchedPattern = SECURITY_PATTERNS.find(pattern => {
+        const findMatch = (patterns, label) => patterns.find((pattern) => {
             const isMatch = pattern.test(str);
             if (pattern.global) pattern.lastIndex = 0;
+            if (isMatch) {
+                detection = { label, path, value: str.slice(0, 220) };
+            }
             return isMatch;
         });
 
-        if (matchedPattern) {
-            console.warn(`[SECURITY] Blocked suspicious input in ${path} from IP: ${ip}`);
-            console.warn(`[SECURITY] Matched Pattern: ${matchedPattern}`);
-            console.warn(`[SECURITY] Value: ${str.substring(0, 500)}`);
-            logNotification('attack_blocked', 'Malicious Input Blocked', `Suspicious pattern detected in ${path} from IP: ${ip}`, ip);
-            return true;
-        }
+        if (findMatch(SECURITY_PATTERNS, 'xss_or_path_traversal')) return true;
+        if (findMatch(SQL_INJECTION_PATTERNS, 'sql_injection')) return true;
+        if (findMatch(COMMAND_INJECTION_PATTERNS, 'command_injection')) return true;
         return false;
     };
 
     const checkObject = (obj, path = '') => {
         if (!obj || typeof obj !== 'object') return false;
         for (const key in obj) {
+            if (NOSQL_OPERATOR_KEYS.has(key)) {
+                detection = { label: 'nosql_or_prototype_pollution', path: path ? `${path}.${key}` : key, value: key };
+                return true;
+            }
             const value = obj[key];
             const currentPath = path ? `${path}.${key}` : key;
             if (typeof value === 'string' && checkString(value, currentPath)) {
                 return true;
+            }
+            if (Array.isArray(value)) {
+                for (let i = 0; i < value.length; i += 1) {
+                    const currentItemPath = `${currentPath}[${i}]`;
+                    if (typeof value[i] === 'string' && checkString(value[i], currentItemPath)) {
+                        return true;
+                    }
+                    if (typeof value[i] === 'object' && value[i] !== null && checkObject(value[i], currentItemPath)) {
+                        return true;
+                    }
+                }
             }
             if (typeof value === 'object' && value !== null) {
                 if (checkObject(value, currentPath)) return true;
@@ -319,9 +689,28 @@ const sanitizeInput = (req, res, next) => {
         return false;
     };
 
-    // Only check body and query, skip params which might have URLs
-    if (checkObject(req.body) || checkObject(req.query)) {
-        return res.status(400).json({ error: 'Invalid input detected. Please avoid using script tags or known attack patterns.' });
+    if (checkObject(req.body, 'body') || checkObject(req.query, 'query')) {
+        const attempts = registerIncident(memoryMaliciousInputAttempts, ip, RATE_LIMIT_VIOLATION_WINDOW_MS);
+        const message = `Suspicious payload blocked. type=${detection?.label || 'unknown'}, path=${detection?.path || 'n/a'}, attempts=${attempts}`;
+        void logAttackNotification({
+            type: 'attack_blocked',
+            title: 'Malicious Input Blocked',
+            message,
+            ip
+        });
+
+        if (attempts >= MALICIOUS_INPUT_BLOCK_THRESHOLD) {
+            const blockPayload = blockIpTemporarily(ip, TEMP_BLOCK_DURATION_MS, 'Repeated malicious payloads (injection defense)');
+            void logAttackNotification({
+                type: 'attack_blocked',
+                title: 'IP Auto-Blocked (Injection Defense)',
+                message: `Repeated malicious payloads detected. blockedUntil=${new Date(blockPayload.blockedUntil).toISOString()}`,
+                ip
+            });
+            return res.status(403).json({ error: 'Request blocked due to repeated malicious input attempts.' });
+        }
+
+        return res.status(400).json({ error: 'Invalid input detected. Request blocked by security policy.' });
     }
 
     next();
@@ -345,6 +734,11 @@ app.use(cors({
     credentials: true
 }));
 
+app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+});
+
 app.use(cookieParser(SESSION_SECRET));
 app.use(bodyParser.json({ limit: '12mb' }));
 app.use(rateLimiter);
@@ -365,7 +759,11 @@ const readDB = () => {
             content: {},
             contentHistory: [],
             analytics: { visits: [], reelClicks: {}, sessionDurations: {}, clearedAt: null },
-            notifications: []
+            notifications: [],
+            security: {
+                blockedIps: {},
+                appeals: []
+            }
         };
     }
 };
@@ -381,12 +779,48 @@ const initializeDB = () => {
     if (!db.analytics.sessionDurations || typeof db.analytics.sessionDurations !== 'object') db.analytics.sessionDurations = {};
     if (!db.analytics.clearedAt) db.analytics.clearedAt = null;
     if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
+    if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
+    if (!db.security.blockedIps || typeof db.security.blockedIps !== 'object') db.security.blockedIps = {};
+    if (!Array.isArray(db.security.appeals)) db.security.appeals = [];
     writeDB(db);
 };
 initializeDB();
 
+const hydrateBlockedIpsFromDb = () => {
+    try {
+        const db = readDB();
+        const blockedIps = db.security?.blockedIps || {};
+        const now = Date.now();
+        let mutated = false;
+
+        Object.entries(blockedIps).forEach(([ip, payload]) => {
+            const blockedUntil = Number(payload?.blockedUntil || 0);
+            if (!blockedUntil || blockedUntil <= now) {
+                delete blockedIps[ip];
+                mutated = true;
+                return;
+            }
+            BLOCKED_IPS.set(ip, {
+                blockedUntil,
+                reason: payload?.reason || 'Security policy triggered',
+                source: payload?.source || 'persisted',
+                createdAt: payload?.createdAt || new Date(now).toISOString(),
+                updatedAt: payload?.updatedAt || new Date(now).toISOString()
+            });
+        });
+
+        if (mutated) {
+            db.security.blockedIps = blockedIps;
+            writeDB(db);
+        }
+    } catch (error) {
+        console.warn('Failed to hydrate blocked IPs from DB:', error.message);
+    }
+};
+hydrateBlockedIpsFromDb();
+
 // Log notification helper
-const logNotification = (type, title, message, ip = null) => {
+const logNotification = (type, title, message, ip = null, metadata = null) => {
     try {
         const db = readDB();
         if (!db.notifications) db.notifications = [];
@@ -397,6 +831,7 @@ const logNotification = (type, title, message, ip = null) => {
             title,
             message,
             ip,
+            metadata,
             timestamp: new Date().toISOString(),
             read: false
         };
@@ -580,6 +1015,62 @@ const buildAnalyticsStats = (visits) => {
     };
 };
 
+const isLikelyIpSearch = (value = '') => /^(\d{1,3}\.){1,3}\d{1,3}$|^[a-f0-9:]{2,}$/i.test(value.trim());
+
+const visitMatchesSearch = (visit, query) => {
+    const normalized = String(query || '').trim().toLowerCase();
+    if (!normalized) return true;
+
+    const vpnLabel = visit.isVpn ? 'vpn true yes' : 'vpn false no';
+    const fields = [
+        visit.id,
+        visit.ip,
+        visit.userAgent,
+        visit.deviceType,
+        visit.country,
+        visit.city,
+        visit.region,
+        visit.isp,
+        visit.connectionType,
+        visit.timezone,
+        visit.pageViewed,
+        visit.reelId,
+        visit.timestamp,
+        Number(visit.sessionDuration || 0),
+        vpnLabel
+    ];
+
+    return fields.some((value) => String(value ?? '').toLowerCase().includes(normalized));
+};
+
+const buildIpSearchSummary = (visits, query) => {
+    const normalized = String(query || '').trim().toLowerCase();
+    if (!normalized || !isLikelyIpSearch(normalized)) return null;
+
+    const matches = visits
+        .filter((visit) => String(visit.ip || '').toLowerCase().includes(normalized))
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    if (matches.length === 0) return null;
+
+    const totalDuration = matches.reduce((sum, visit) => sum + Math.max(0, Number(visit.sessionDuration) || 0), 0);
+    const uniquePages = Array.from(new Set(matches.map((visit) => visit.pageViewed).filter(Boolean)));
+    const vpnHits = matches.filter((visit) => Boolean(visit.isVpn)).length;
+    const first = matches[0];
+    const last = matches[matches.length - 1];
+
+    return {
+        ip: first.ip || normalized,
+        visits: matches.length,
+        totalDuration,
+        averageDuration: Math.round(totalDuration / matches.length),
+        uniquePages,
+        firstSeen: first.timestamp || null,
+        lastSeen: last.timestamp || null,
+        vpnHits
+    };
+};
+
 const getCacheKey = ({ clearedAt, from, to }) => `${clearedAt || 'all'}:${from || 'none'}:${to || 'none'}`;
 
 const fetchSupabaseVisits = async ({ clearedAt, from, to }) => {
@@ -684,9 +1175,143 @@ app.get('/api/health', (_req, res) => {
         timestamp: new Date().toISOString(),
         hasDist: HAS_DIST,
         hasSupabaseKey: Boolean(supabaseKey),
+        redisEnabled: REDIS_ENABLED,
+        redisStatus,
         redisConnected,
         authMode: 'cookie-session'
     });
+});
+
+app.get('/api/security/block-status', (req, res) => {
+    const ip = getClientIP(req);
+    const status = getIpBlockStatus(ip);
+    res.json({
+        blocked: status.blocked,
+        reason: status.reason || null,
+        blockedUntil: status.blockedUntil || null,
+        remainingSeconds: Math.max(0, Math.ceil((status.remainingMs || 0) / 1000)),
+        ip
+    });
+});
+
+app.post('/api/security/appeal', async (req, res) => {
+    try {
+        const ip = getClientIP(req);
+        const status = getIpBlockStatus(ip);
+        if (!status.blocked) {
+            return res.status(400).json({ success: false, error: 'IP is not currently blocked.' });
+        }
+
+        const now = Date.now();
+        const lastSubmitted = Number(memoryAppealSubmissions.get(ip) || 0);
+        if (lastSubmitted && (now - lastSubmitted) < APPEAL_MIN_INTERVAL_MS) {
+            const waitSeconds = Math.ceil((APPEAL_MIN_INTERVAL_MS - (now - lastSubmitted)) / 1000);
+            return res.status(429).json({ success: false, error: `Please wait ${waitSeconds}s before submitting another appeal.` });
+        }
+
+        const message = sanitizeString(req.body?.message || '', 450);
+        const contact = sanitizeString(req.body?.contact || '', 120);
+        if (!message || message.length < 10) {
+            return res.status(400).json({ success: false, error: 'Please provide more detail (minimum 10 characters).' });
+        }
+
+        memoryAppealSubmissions.set(ip, now);
+        const db = readDB();
+        if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
+        if (!Array.isArray(db.security.appeals)) db.security.appeals = [];
+
+        const appealId = crypto.randomUUID();
+        const geo = await getGeoDataCached(ip);
+        const geoSummary = geo ? `${geo.city || 'Unknown'}, ${geo.country || 'Unknown'} | ISP: ${geo.isp || 'Unknown'} | VPN: ${geo.isVpn ? 'yes' : 'no'}` : 'Geo unavailable';
+        const appeal = {
+            id: appealId,
+            ip,
+            reason: status.reason || 'Security policy triggered',
+            blockedUntil: status.blockedUntil || null,
+            message,
+            contact,
+            geo: geo || null,
+            userAgent: req.body?.userAgent || req.headers['user-agent'] || 'Unknown',
+            createdAt: new Date().toISOString(),
+            status: 'pending',
+            decision: null,
+            adminNote: null,
+            resolvedAt: null
+        };
+
+        db.security.appeals.unshift(appeal);
+        if (db.security.appeals.length > 500) db.security.appeals = db.security.appeals.slice(0, 500);
+        writeDB(db);
+
+        const notifyMessage = `Appeal submitted. reason="${appeal.reason}" | user="${message}" | contact="${contact || 'n/a'}" | ${geoSummary}`;
+        logNotification(
+            'appeal',
+            'Unban Appeal Received',
+            sanitizeString(notifyMessage, 450),
+            ip,
+            { appealId, status: 'pending', blockedUntil: status.blockedUntil || null }
+        );
+
+        return res.json({ success: true, appealId });
+    } catch (error) {
+        reportServerError('Appeal Submit Error', error, req);
+        return res.status(500).json({ success: false, error: 'Failed to submit appeal.' });
+    }
+});
+
+app.post('/api/security/appeals/:id/decision', validateAdminToken, (req, res) => {
+    try {
+        const appealId = req.params.id;
+        const decision = String(req.body?.decision || '').toLowerCase();
+        const adminNote = sanitizeString(req.body?.adminNote || '', 220);
+        if (!['unblock', 'keep'].includes(decision)) {
+            return res.status(400).json({ success: false, error: 'Decision must be `unblock` or `keep`.' });
+        }
+
+        const db = readDB();
+        if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
+        if (!Array.isArray(db.security.appeals)) db.security.appeals = [];
+
+        const idx = db.security.appeals.findIndex((appeal) => appeal.id === appealId);
+        if (idx === -1) {
+            return res.status(404).json({ success: false, error: 'Appeal not found.' });
+        }
+
+        const appeal = db.security.appeals[idx];
+        const nowIso = new Date().toISOString();
+        appeal.status = 'resolved';
+        appeal.decision = decision;
+        appeal.adminNote = adminNote || null;
+        appeal.resolvedAt = nowIso;
+
+        if (decision === 'unblock') {
+            unblockIp(appeal.ip);
+            logNotification('security', 'IP Unblocked By Admin', `Appeal ${appealId} approved. IP ${appeal.ip} was unblocked.`, appeal.ip);
+        } else {
+            const active = getIpBlockStatus(appeal.ip);
+            if (!active.blocked) {
+                blockIpTemporarily(appeal.ip, TEMP_BLOCK_DURATION_MS, 'Appeal denied by admin');
+            }
+            logNotification('warning', 'Appeal Denied', `Appeal ${appealId} denied. IP ${appeal.ip} remains blocked.`, appeal.ip);
+        }
+
+        if (Array.isArray(db.notifications)) {
+            const nIdx = db.notifications.findIndex((n) => n?.metadata?.appealId === appealId);
+            if (nIdx !== -1) {
+                db.notifications[nIdx].metadata = {
+                    ...(db.notifications[nIdx].metadata || {}),
+                    status: 'resolved',
+                    decision
+                };
+            }
+        }
+
+        writeDB(db);
+        return res.json({ success: true, appeal });
+    } catch (error) {
+        reportServerError('Appeal Decision Error', error, req);
+        return res.status(500).json({ success: false, error: 'Failed to process appeal decision.' });
+    }
 });
 
 // Get Content
@@ -1152,6 +1777,10 @@ app.post('/api/track/reel', async (req, res) => {
 
 // Get Analytics with pagination
 app.get('/api/analytics', validateAdminToken, async (req, res) => {
+    const searchQuery = sanitizeString(String(req.query.q || ''), 120).toLowerCase();
+    const ipQuery = sanitizeString(String(req.query.ip || ''), 120).toLowerCase();
+    const pagePathQuery = sanitizeString(String(req.query.pagePath || ''), 120).toLowerCase();
+
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(100, parseInt(req.query.limit) || 50);
@@ -1183,28 +1812,64 @@ app.get('/api/analytics', validateAdminToken, async (req, res) => {
         }
 
         allVisits = applySessionDurationOverrides(allVisits, durationOverrides);
+
+        if (ipQuery) {
+            allVisits = allVisits.filter((visit) => String(visit.ip || '').toLowerCase().includes(ipQuery));
+        }
+        if (pagePathQuery) {
+            allVisits = allVisits.filter((visit) => String(visit.pageViewed || '').toLowerCase().includes(pagePathQuery));
+        }
+        if (searchQuery) {
+            allVisits = allVisits.filter((visit) => visitMatchesSearch(visit, searchQuery));
+        }
+
         allVisits.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         const visits = allVisits.slice(offset, offset + limit);
         const total = allVisits.length;
         const stats = buildAnalyticsStats(allVisits);
+        const ipSummary = buildIpSearchSummary(allVisits, ipQuery || searchQuery);
 
         res.json({
             visits,
             pagination: { page, limit, total },
             reelClicks: db.analytics?.reelClicks || {},
             stats,
-            filters: { from: from || null, to: to || null, clearedAt }
+            ipSummary,
+            filters: {
+                from: from || null,
+                to: to || null,
+                clearedAt,
+                q: searchQuery || null,
+                ip: ipQuery || null,
+                pagePath: pagePathQuery || null
+            }
         });
     } catch (error) {
         console.error('Analytics fetch error:', error);
         reportServerError('Analytics Fetch Error', error, req);
         const db = readDB();
-        const visits = applySessionDurationOverrides((db.analytics?.visits || []).map(mapLocalVisit), db.analytics?.sessionDurations || {});
+        let visits = applySessionDurationOverrides((db.analytics?.visits || []).map(mapLocalVisit), db.analytics?.sessionDurations || {});
+        if (ipQuery) {
+            visits = visits.filter((visit) => String(visit.ip || '').toLowerCase().includes(ipQuery));
+        }
+        if (pagePathQuery) {
+            visits = visits.filter((visit) => String(visit.pageViewed || '').toLowerCase().includes(pagePathQuery));
+        }
+        if (searchQuery) {
+            visits = visits.filter((visit) => visitMatchesSearch(visit, searchQuery));
+        }
+        const ipSummary = buildIpSearchSummary(visits, ipQuery || searchQuery);
         res.json({
             visits,
             pagination: { page: 1, limit: visits.length || 50, total: visits.length },
             reelClicks: db.analytics?.reelClicks || {},
-            stats: buildAnalyticsStats(visits)
+            stats: buildAnalyticsStats(visits),
+            ipSummary,
+            filters: {
+                q: searchQuery || null,
+                ip: ipQuery || null,
+                pagePath: pagePathQuery || null
+            }
         });
     }
 });
@@ -1354,20 +2019,25 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
         let supabaseCleared = false;
         let supabaseErrorMessage = null;
         let deletedRows = 0;
+        const hasSupabaseServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-        try {
-            const beforeCount = await countSupabaseVisitors();
-            await deleteSupabaseVisitorsInBatches();
-            const afterCount = await countSupabaseVisitors();
-            deletedRows = Math.max(0, beforeCount - afterCount);
-            supabaseCleared = afterCount === 0;
-            if (beforeCount > 0 && deletedRows === 0) {
-                throw new Error('Delete request completed but no Supabase rows were removed. Configure service-role key and verify RLS policies.');
+        if (hasSupabaseServiceRole) {
+            try {
+                const beforeCount = await countSupabaseVisitors();
+                await deleteSupabaseVisitorsInBatches();
+                const afterCount = await countSupabaseVisitors();
+                deletedRows = Math.max(0, beforeCount - afterCount);
+                supabaseCleared = afterCount === 0;
+                if (beforeCount > 0 && deletedRows === 0) {
+                    throw new Error('Delete request completed but no Supabase rows were removed. Verify delete policy/permissions on visitors table.');
+                }
+            } catch (supabaseError) {
+                supabaseErrorMessage = supabaseError.message || 'Supabase delete failed';
+                console.warn('Supabase clear analytics partial:', supabaseErrorMessage);
+                logNotification('warning', 'Partial Analytics Clear', `Supabase clear failed: ${supabaseErrorMessage}`);
             }
-        } catch (supabaseError) {
-            supabaseErrorMessage = supabaseError.message || 'Supabase delete failed';
-            console.warn('Supabase clear analytics failed:', supabaseErrorMessage);
-            logNotification('warning', 'Partial Analytics Clear', `Supabase clear failed: ${supabaseErrorMessage}`);
+        } else {
+            supabaseErrorMessage = 'Supabase hard delete skipped because SUPABASE_SERVICE_ROLE_KEY is not configured.';
         }
 
         const db = readDB();
@@ -1393,7 +2063,9 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
             supabaseCleared,
             deletedRows,
             clearedAt,
-            message: supabaseErrorMessage ? 'Local analytics cleared. Supabase rows require elevated key for hard delete.' : 'Analytics data cleared successfully.'
+            message: supabaseErrorMessage
+                ? 'Analytics cleared locally. Supabase hard delete is unavailable without elevated delete permissions.'
+                : 'Analytics data cleared successfully.'
         });
     } catch (error) {
         reportServerError('Analytics Clear Error', error, req);
@@ -1425,6 +2097,37 @@ setInterval(() => {
         const staleByLock = state?.lockUntil && state.lockUntil < now - 60000;
         if (staleByWindow || staleByLock) {
             memoryLoginAttempts.delete(loginKey);
+        }
+    }
+
+    for (const [ip, payload] of BLOCKED_IPS.entries()) {
+        const blockedUntil = Number(payload?.blockedUntil ?? payload ?? 0);
+        if (!blockedUntil || blockedUntil <= now) {
+            unblockIp(ip);
+        }
+    }
+
+    for (const [ip, state] of memoryRateLimitViolations.entries()) {
+        if (!state?.lastSeenAt || (now - state.lastSeenAt) > RATE_LIMIT_VIOLATION_WINDOW_MS) {
+            memoryRateLimitViolations.delete(ip);
+        }
+    }
+
+    for (const [ip, state] of memoryMaliciousInputAttempts.entries()) {
+        if (!state?.lastSeenAt || (now - state.lastSeenAt) > RATE_LIMIT_VIOLATION_WINDOW_MS) {
+            memoryMaliciousInputAttempts.delete(ip);
+        }
+    }
+
+    for (const [ip, cached] of geoDataCache.entries()) {
+        if (!cached?.expiresAt || cached.expiresAt <= now) {
+            geoDataCache.delete(ip);
+        }
+    }
+
+    for (const [ip, ts] of memoryAppealSubmissions.entries()) {
+        if (!ts || (now - ts) > APPEAL_MIN_INTERVAL_MS) {
+            memoryAppealSubmissions.delete(ip);
         }
     }
 }, 60000);
@@ -1541,5 +2244,9 @@ app.listen(PORT, () => {
     console.log('Health endpoint: /api/health');
     console.log(`Supabase URL: ${supabaseUrl}`);
     console.log(`Static build present: ${HAS_DIST}`);
-    console.log(`Redis connected: ${redisConnected}`);
+    if (!REDIS_ENABLED) {
+        console.log('Redis: disabled (set REDIS_URL to enable).');
+    } else {
+        console.log(`Redis status: ${redisStatus} (connected=${redisConnected})`);
+    }
 });

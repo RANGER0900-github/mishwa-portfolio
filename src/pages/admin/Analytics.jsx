@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useDeferredValue, useRef } from 'react';
 import {
     AreaChart,
     Area,
@@ -35,7 +35,11 @@ import {
     ZoomOut,
     RotateCcw,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Search,
+    Sparkles,
+    CalendarDays,
+    Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps';
@@ -44,8 +48,52 @@ import { adminFetch } from '../../utils/adminApi';
 
 const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 const COLORS = ['#64ffda', '#0070f3', '#f59e0b', '#ef4444', '#8b5cf6', '#10b981'];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_LABELS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const pad = (value) => String(value).padStart(2, '0');
+
+const parseDateTimeValue = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+};
+
+const toDateKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+const toTimeKey = (date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const toDateTimeLocal = (date) => `${toDateKey(date)}T${toTimeKey(date)}`;
+const getDayStamp = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+const isSameCalendarDay = (left, right) => getDayStamp(left) === getDayStamp(right);
+
+const getMonthGrid = (viewDate) => {
+    const firstDayOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+    const offset = firstDayOfMonth.getDay();
+    const gridStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1 - offset);
+
+    return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + index);
+        return {
+            date,
+            key: toDateKey(date),
+            inCurrentMonth: date.getMonth() === viewDate.getMonth()
+        };
+    });
+};
+
+const formatPickerLabel = (value) => {
+    const parsed = parseDateTimeValue(value);
+    if (!parsed) return 'Select date & time';
+    return parsed.toLocaleString([], {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
 
 const formatDuration = (seconds) => {
     const safeSeconds = Math.max(0, Number(seconds) || 0);
@@ -65,7 +113,13 @@ const Analytics = () => {
     const [pageSize, setPageSize] = useState(window.innerWidth < 768 ? 20 : 50);
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [activeDatePicker, setActiveDatePicker] = useState(null);
+    const [pickerMonth, setPickerMonth] = useState(new Date());
+    const [searchInput, setSearchInput] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const isMobile = pageSize === 20;
+    const datePickerRef = useRef(null);
     const [mobileSections, setMobileSections] = useState({
         charts: true,
         map: false,
@@ -81,7 +135,8 @@ const Analytics = () => {
         `${surface}:${visitor.id || 'no-id'}:${visitor.timestamp || 'no-time'}:${visitor.ip || 'no-ip'}:${index}`
     );
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setIsRefreshing(true);
         try {
             const query = new URLSearchParams({
                 page: String(currentPage),
@@ -89,6 +144,7 @@ const Analytics = () => {
             });
             if (fromDate) query.set('from', fromDate);
             if (toDate) query.set('to', toDate);
+            if (searchQuery) query.set('q', searchQuery);
             const res = await adminFetch(`/api/analytics?${query.toString()}`);
             const apiData = await res.json();
             setData(apiData);
@@ -96,12 +152,13 @@ const Analytics = () => {
             console.error('Analytics Error:', err);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
-    }, [currentPage, pageSize, fromDate, toDate]);
+    }, [currentPage, pageSize, fromDate, toDate, searchQuery]);
 
     useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 30000);
+        fetchData({ silent: true });
+        const interval = setInterval(() => fetchData({ silent: true }), 30000);
         return () => clearInterval(interval);
     }, [fetchData]);
 
@@ -113,7 +170,109 @@ const Analytics = () => {
 
     useEffect(() => {
         setCurrentPage(1);
+    }, [fromDate, toDate, searchQuery]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchQuery(searchInput.trim());
+        }, 280);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    useEffect(() => {
+        if (!activeDatePicker) return undefined;
+
+        const handleOutsideClick = (event) => {
+            if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+                setActiveDatePicker(null);
+            }
+        };
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                setActiveDatePicker(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('mousedown', handleOutsideClick);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [activeDatePicker]);
+
+    const applyRangeDateTime = useCallback((target, nextDate) => {
+        if (!(nextDate instanceof Date) || Number.isNaN(nextDate.getTime())) return;
+        const next = new Date(nextDate.getTime());
+
+        if (target === 'from') {
+            const currentTo = parseDateTimeValue(toDate);
+            if (currentTo && next > currentTo) {
+                setToDate(toDateTimeLocal(next));
+            }
+            setFromDate(toDateTimeLocal(next));
+            return;
+        }
+
+        const currentFrom = parseDateTimeValue(fromDate);
+        if (currentFrom && next < currentFrom) {
+            setFromDate(toDateTimeLocal(next));
+        }
+        setToDate(toDateTimeLocal(next));
     }, [fromDate, toDate]);
+
+    const openDatePicker = useCallback((target) => {
+        const selected = parseDateTimeValue(target === 'from' ? fromDate : toDate) || new Date();
+        setPickerMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+        setActiveDatePicker((prev) => (prev === target ? null : target));
+    }, [fromDate, toDate]);
+
+    const updateActiveDay = useCallback((nextDay) => {
+        if (!activeDatePicker) return;
+        const current = parseDateTimeValue(activeDatePicker === 'from' ? fromDate : toDate) || new Date();
+        const next = new Date(
+            nextDay.getFullYear(),
+            nextDay.getMonth(),
+            nextDay.getDate(),
+            current.getHours(),
+            current.getMinutes(),
+            0,
+            0
+        );
+        applyRangeDateTime(activeDatePicker, next);
+    }, [activeDatePicker, applyRangeDateTime, fromDate, toDate]);
+
+    const updateActiveTime = useCallback((timeValue) => {
+        if (!activeDatePicker || !timeValue) return;
+        const [hours, minutes] = String(timeValue).split(':').map((value) => Number(value));
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+        const current = parseDateTimeValue(activeDatePicker === 'from' ? fromDate : toDate) || new Date();
+        const next = new Date(current);
+        next.setHours(hours, minutes, 0, 0);
+        applyRangeDateTime(activeDatePicker, next);
+    }, [activeDatePicker, applyRangeDateTime, fromDate, toDate]);
+
+    const applyPresetRange = useCallback((preset) => {
+        const now = new Date();
+        let start = new Date(now);
+        let end = new Date(now);
+
+        if (preset === 'today') {
+            start.setHours(0, 0, 0, 0);
+        } else if (preset === '24h') {
+            start = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+        } else if (preset === '7d') {
+            start = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        } else if (preset === 'month') {
+            start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+            end = new Date(now);
+        }
+
+        setFromDate(toDateTimeLocal(start));
+        setToDate(toDateTimeLocal(end));
+        setPickerMonth(new Date(start.getFullYear(), start.getMonth(), 1));
+        setActiveDatePicker(null);
+    }, []);
 
     const copyToClipboard = async (visitorKey, text) => {
         try {
@@ -165,10 +324,14 @@ const Analytics = () => {
     };
 
     const visits = data?.visits || [];
+    const deferredVisits = useDeferredValue(visits);
     const stats = data?.stats || {};
     const reelClicks = data?.reelClicks || {};
+    const ipSummary = data?.ipSummary || null;
+    const searchPending = searchInput.trim() !== searchQuery;
     const pagination = data?.pagination || { page: currentPage, limit: pageSize, total: visits.length };
     const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / (pagination.limit || 1)));
+    const animateRows = deferredVisits.length <= 24;
 
     const chartData = useMemo(() => {
         if (Array.isArray(stats.daily_visits) && stats.daily_visits.length > 0) {
@@ -209,6 +372,13 @@ const Analytics = () => {
     const wifiCount = stats.connection?.wifi_ethernet ?? visits.filter((v) => v.connectionType === 'wifi' || v.connectionType === 'ethernet').length;
     const cellularCount = stats.connection?.cellular ?? visits.filter((v) => v.connectionType === 'cellular').length;
     const avgSession = stats.average_session_seconds ?? 0;
+    const fromParsed = parseDateTimeValue(fromDate);
+    const toParsed = parseDateTimeValue(toDate);
+    const activeParsed = parseDateTimeValue(activeDatePicker === 'from' ? fromDate : toDate);
+    const activeTimeValue = activeParsed ? toTimeKey(activeParsed) : '12:00';
+    const pickerDays = useMemo(() => getMonthGrid(pickerMonth), [pickerMonth]);
+    const rangeStart = fromParsed && toParsed ? Math.min(getDayStamp(fromParsed), getDayStamp(toParsed)) : null;
+    const rangeEnd = fromParsed && toParsed ? Math.max(getDayStamp(fromParsed), getDayStamp(toParsed)) : null;
 
     const updateZoom = (delta) => {
         setMapZoom((prev) => clamp(Number((prev + delta).toFixed(2)), 1, 8));
@@ -247,46 +417,231 @@ const Analytics = () => {
                         </p>
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-                    <input
-                        type="date"
-                        value={fromDate}
-                        onChange={(e) => setFromDate(e.target.value)}
-                        className="flex-1 sm:flex-none px-3 py-3 bg-black/20 border border-white/10 rounded-xl text-gray-300 text-sm focus:outline-none focus:border-secondary"
-                        title="From date"
-                    />
-                    <input
-                        type="date"
-                        value={toDate}
-                        onChange={(e) => setToDate(e.target.value)}
-                        className="flex-1 sm:flex-none px-3 py-3 bg-black/20 border border-white/10 rounded-xl text-gray-300 text-sm focus:outline-none focus:border-secondary"
-                        title="To date"
-                    />
-                    {(fromDate || toDate) && (
-                        <button
-                            onClick={() => {
-                                setFromDate('');
-                                setToDate('');
-                            }}
-                            className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all text-sm"
+                <div className="flex flex-col gap-3 w-full lg:w-auto">
+                    <div className="relative w-full lg:w-[460px]">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                            type="text"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            placeholder="Search IP, page, city, ISP, VPN, session, date/time..."
+                            className="w-full pl-10 pr-20 py-3 bg-black/20 border border-white/10 rounded-xl text-gray-200 text-sm focus:outline-none focus:border-secondary/60 transition-all"
+                            aria-label="Search analytics"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {(searchPending || isRefreshing) && <Loader2 size={14} className="text-secondary animate-spin" />}
+                            {!searchPending && !isRefreshing && <Sparkles size={14} className="text-secondary/70" />}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                        <div ref={datePickerRef} className="relative w-full sm:w-[430px]">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <motion.button
+                                    type="button"
+                                    onClick={() => openDatePicker('from')}
+                                    whileHover={{ y: -1, scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    className={`group relative px-3 py-2 text-left border rounded-xl transition-all overflow-hidden ${activeDatePicker === 'from' ? 'border-secondary/60 bg-secondary/10 shadow-[0_0_20px_rgba(0,243,255,0.20)]' : 'border-white/10 bg-black/20 hover:border-secondary/40 hover:bg-secondary/5'}`}
+                                >
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-secondary/10 via-transparent to-primary/10"></div>
+                                    <span className="relative block text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-1">Start Date</span>
+                                    <span className="relative flex items-center gap-2 text-sm text-gray-200">
+                                        <CalendarDays size={14} className="text-secondary/80" />
+                                        {formatPickerLabel(fromDate)}
+                                    </span>
+                                </motion.button>
+                                <motion.button
+                                    type="button"
+                                    onClick={() => openDatePicker('to')}
+                                    whileHover={{ y: -1, scale: 1.01 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    className={`group relative px-3 py-2 text-left border rounded-xl transition-all overflow-hidden ${activeDatePicker === 'to' ? 'border-secondary/60 bg-secondary/10 shadow-[0_0_20px_rgba(0,243,255,0.20)]' : 'border-white/10 bg-black/20 hover:border-secondary/40 hover:bg-secondary/5'}`}
+                                >
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-secondary/10 via-transparent to-primary/10"></div>
+                                    <span className="relative block text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-1">End Date</span>
+                                    <span className="relative flex items-center gap-2 text-sm text-gray-200">
+                                        <CalendarDays size={14} className="text-secondary/80" />
+                                        {formatPickerLabel(toDate)}
+                                    </span>
+                                </motion.button>
+                            </div>
+
+                            <AnimatePresence>
+                                {activeDatePicker && (
+                                    <motion.div
+                                        key="date-range-picker"
+                                        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                                        transition={{ duration: 0.24, ease: 'easeOut' }}
+                                        data-lenis-prevent
+                                        className="absolute z-30 mt-3 left-0 right-0 sm:right-auto sm:w-[560px] rounded-2xl border border-secondary/20 bg-[#081629]/95 backdrop-blur-2xl shadow-[0_24px_70px_rgba(0,0,0,0.45)] p-4 overflow-hidden"
+                                    >
+                                        <div className="absolute -top-16 -right-10 h-32 w-32 rounded-full bg-secondary/15 blur-3xl pointer-events-none"></div>
+                                        <div className="absolute -bottom-16 -left-8 h-28 w-28 rounded-full bg-primary/15 blur-3xl pointer-events-none"></div>
+
+                                        <div className="relative flex flex-wrap items-center justify-between gap-2 mb-4">
+                                            <div>
+                                                <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Filter Window</p>
+                                                <p className="text-sm font-bold text-white">
+                                                    Editing {activeDatePicker === 'from' ? 'Start Date' : 'End Date'}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                                                    className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:border-secondary/50 transition-all"
+                                                    aria-label="Previous month"
+                                                >
+                                                    <ChevronLeft size={16} />
+                                                </button>
+                                                <p className="min-w-[150px] text-center text-sm font-semibold text-white">
+                                                    {MONTH_LABELS[pickerMonth.getMonth()]} {pickerMonth.getFullYear()}
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPickerMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                                                    className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:border-secondary/50 transition-all"
+                                                    aria-label="Next month"
+                                                >
+                                                    <ChevronRight size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-4">
+                                            <div>
+                                                <div className="grid grid-cols-7 gap-1 mb-2">
+                                                    {DAY_LABELS.map((day) => (
+                                                        <span key={day} className="text-[10px] text-gray-500 font-bold uppercase tracking-wider text-center py-1">
+                                                            {day}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <div className="grid grid-cols-7 gap-1">
+                                                    {pickerDays.map(({ date, key, inCurrentMonth }) => {
+                                                        const dayStamp = getDayStamp(date);
+                                                        const isSelectedFrom = fromParsed ? isSameCalendarDay(date, fromParsed) : false;
+                                                        const isSelectedTo = toParsed ? isSameCalendarDay(date, toParsed) : false;
+                                                        const isSelected = isSelectedFrom || isSelectedTo;
+                                                        const isInRange = rangeStart !== null && rangeEnd !== null && dayStamp > rangeStart && dayStamp < rangeEnd;
+                                                        const isActiveDay = activeParsed ? isSameCalendarDay(date, activeParsed) : false;
+
+                                                        return (
+                                                            <motion.button
+                                                                key={key}
+                                                                type="button"
+                                                                onClick={() => updateActiveDay(date)}
+                                                                whileHover={{ scale: 1.06, y: -1 }}
+                                                                whileTap={{ scale: 0.97 }}
+                                                                className={`h-9 rounded-xl text-xs font-semibold transition-all ${
+                                                                    isSelected
+                                                                        ? 'bg-secondary text-[#02101f] shadow-[0_8px_25px_rgba(0,243,255,0.28)]'
+                                                                        : isInRange
+                                                                            ? 'bg-secondary/20 text-secondary border border-secondary/20'
+                                                                            : isActiveDay
+                                                                                ? 'bg-white/10 border border-white/20 text-white'
+                                                                                : inCurrentMonth
+                                                                                    ? 'text-gray-200 hover:bg-white/10 border border-transparent'
+                                                                                    : 'text-gray-600 hover:bg-white/5 border border-transparent'
+                                                                }`}
+                                                            >
+                                                                {date.getDate()}
+                                                            </motion.button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-xl border border-white/10 bg-black/25 p-3 space-y-3">
+                                                <div>
+                                                    <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500 mb-1">Selected</p>
+                                                    <p className="text-xs text-gray-200 leading-relaxed">{formatPickerLabel(activeDatePicker === 'from' ? fromDate : toDate)}</p>
+                                                </div>
+                                                <label className="block">
+                                                    <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Time</span>
+                                                    <input
+                                                        type="time"
+                                                        step={60}
+                                                        value={activeTimeValue}
+                                                        onChange={(event) => updateActiveTime(event.target.value)}
+                                                        className="mt-1 w-full bg-[#0a192f] border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:outline-none focus:border-secondary/60"
+                                                    />
+                                                </label>
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Quick Range</p>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {[
+                                                            { key: '24h', label: 'Last 24h' },
+                                                            { key: '7d', label: 'Last 7d' },
+                                                            { key: 'today', label: 'Today' },
+                                                            { key: 'month', label: 'This Month' }
+                                                        ].map((preset) => (
+                                                            <button
+                                                                key={preset.key}
+                                                                type="button"
+                                                                onClick={() => applyPresetRange(preset.key)}
+                                                                className="px-2 py-1.5 text-[11px] rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:border-secondary/50 hover:text-secondary transition-all"
+                                                            >
+                                                                {preset.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <motion.button
+                                                    type="button"
+                                                    whileHover={{ y: -1, scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => setActiveDatePicker(null)}
+                                                    className="w-full py-2 rounded-lg bg-secondary/15 border border-secondary/30 text-secondary text-xs font-bold hover:bg-secondary/25 transition-all"
+                                                >
+                                                    Apply & Close
+                                                </motion.button>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                        {(fromDate || toDate || searchInput) && (
+                            <button
+                                onClick={() => {
+                                    setFromDate('');
+                                    setToDate('');
+                                    setSearchInput('');
+                                }}
+                                className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all text-sm"
+                            >
+                                Clear Filters
+                            </button>
+                        )}
+                        <motion.button
+                            whileHover={{ scale: 1.02, y: -1 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setShowExportModal(true)}
+                            className="flex-1 sm:flex-none px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all flex items-center justify-center gap-2"
                         >
-                            Clear Dates
-                        </button>
-                    )}
-                    <button
-                        onClick={() => setShowExportModal(true)}
-                        className="flex-1 sm:flex-none px-5 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all flex items-center justify-center gap-2"
-                    >
-                        <Download size={16} />
-                        Export Data
-                    </button>
-                    <button
-                        onClick={fetchData}
-                        className="flex-1 sm:flex-none px-5 py-3 bg-secondary/10 border border-secondary/20 rounded-xl text-secondary hover:bg-secondary/20 transition-all flex items-center justify-center gap-2"
-                    >
-                        <RefreshCw size={16} />
-                        Refresh
-                    </button>
+                            <Download size={16} />
+                            Export Data
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.03, y: -1 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => fetchData()}
+                            className="group flex-1 sm:flex-none px-5 py-3 bg-secondary/10 border border-secondary/20 rounded-xl text-secondary hover:bg-secondary/20 hover:border-secondary/50 transition-all flex items-center justify-center gap-2 shadow-[0_0_0_rgba(0,243,255,0)] hover:shadow-[0_0_20px_rgba(0,243,255,0.25)]"
+                        >
+                            <motion.span
+                                animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
+                                transition={isRefreshing ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0.2 }}
+                                className="inline-flex"
+                            >
+                                <RefreshCw size={16} />
+                            </motion.span>
+                            Refresh
+                        </motion.button>
+                    </div>
                 </div>
             </header>
 
@@ -312,6 +667,55 @@ const Analytics = () => {
                     </motion.div>
                 ))}
             </div>
+
+            {ipSummary && (
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 sm:p-5 bg-gradient-to-r from-secondary/10 to-primary/5 border border-secondary/20 rounded-2xl backdrop-blur-xl"
+                >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                        <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <Sparkles size={16} className="text-secondary" />
+                            IP Insight: <span className="font-mono text-secondary">{ipSummary.ip}</span>
+                        </h3>
+                        <p className="text-xs uppercase tracking-widest text-gray-400">Premium Search Result</p>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+                        <div className="p-3 rounded-xl bg-black/20 border border-white/10">
+                            <p className="text-gray-500 uppercase tracking-wide">Visits</p>
+                            <p className="text-white font-bold text-sm mt-1">{ipSummary.visits}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/20 border border-white/10">
+                            <p className="text-gray-500 uppercase tracking-wide">Total Session</p>
+                            <p className="text-white font-bold text-sm mt-1">{formatDuration(ipSummary.totalDuration)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/20 border border-white/10">
+                            <p className="text-gray-500 uppercase tracking-wide">Avg Session</p>
+                            <p className="text-white font-bold text-sm mt-1">{formatDuration(ipSummary.averageDuration)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/20 border border-white/10">
+                            <p className="text-gray-500 uppercase tracking-wide">VPN Hits</p>
+                            <p className="text-white font-bold text-sm mt-1">{ipSummary.vpnHits}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/20 border border-white/10">
+                            <p className="text-gray-500 uppercase tracking-wide">First Seen</p>
+                            <p className="text-white font-bold text-sm mt-1">{ipSummary.firstSeen ? new Date(ipSummary.firstSeen).toLocaleString() : 'N/A'}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/20 border border-white/10">
+                            <p className="text-gray-500 uppercase tracking-wide">Last Seen</p>
+                            <p className="text-white font-bold text-sm mt-1">{ipSummary.lastSeen ? new Date(ipSummary.lastSeen).toLocaleString() : 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {(ipSummary.uniquePages || []).slice(0, 8).map((page) => (
+                            <span key={page} className="px-2 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-300 font-mono">
+                                {page}
+                            </span>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
 
             <div className="flex items-center justify-between">
                 <h3 className="text-xs uppercase tracking-widest text-gray-500 font-bold">Charts</h3>
@@ -557,6 +961,11 @@ const Analytics = () => {
                     </div>
                 </div>
 
+                <p className="text-xs text-gray-500 mb-4">
+                    Showing {deferredVisits.length} of {pagination.total || deferredVisits.length} matched sessions
+                    {searchQuery ? ` for "${searchQuery}"` : ''}.
+                </p>
+
                 {isMobile && (
                     <button
                         onClick={() => toggleSection('visitors')}
@@ -567,7 +976,7 @@ const Analytics = () => {
                 )}
 
                 {!isMobile || mobileSections.visitors ? (
-                    <div className="hidden md:block overflow-x-auto">
+                    <div className="hidden md:block overflow-x-auto" data-lenis-prevent>
                     <table className="w-full text-left">
                         <thead>
                             <tr className="text-gray-500 text-xs font-bold uppercase tracking-widest border-b border-white/5">
@@ -579,47 +988,74 @@ const Analytics = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {visits.map((v, index) => (
-                                <tr key={v.id || `${v.ip}-${index}`} className="group hover:bg-white/5 transition-colors">
-                                    <td className="py-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-white font-bold">{v.ip}</span>
+                            {deferredVisits.map((v, index) => {
+                                const rowKey = v.id || `${v.ip}-${index}`;
+                                const rowContent = (
+                                    <>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-white font-bold">{v.ip}</span>
+                                                <button
+                                                    onClick={() => copyToClipboard(getVisitorKey(v, index, 'desktop'), v.ip)}
+                                                    className="p-2 rounded-lg bg-white/5 hover:bg-secondary/20 border border-white/10 hover:border-secondary/50 transition-all duration-300"
+                                                    title="Copy IP"
+                                                >
+                                                    {copiedVisitorKey === getVisitorKey(v, index, 'desktop') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
+                                                </button>
+                                            </div>
+                                            <span className="text-[10px] text-gray-500 font-mono mt-1 block truncate max-w-[220px]">{v.userAgent}</span>
+                                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
+                                                <span>{v.timestamp ? new Date(v.timestamp).toLocaleString() : 'Unknown time'}</span>
+                                                <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400">{v.pageViewed || '/'}</span>
+                                                <span className={`px-1.5 py-0.5 rounded border ${v.isVpn ? 'border-red-400/40 text-red-300 bg-red-500/10' : 'border-emerald-400/40 text-emerald-300 bg-emerald-500/10'}`}>
+                                                    {v.isVpn ? 'VPN' : 'Direct'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4">
+                                            <p className="text-white text-sm font-medium">{v.city || 'Unknown'}</p>
+                                            <p className="text-[10px] text-gray-500 uppercase">{v.country || 'Unknown'}</p>
+                                        </td>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-2">
+                                                {v.deviceType === 'mobile' ? <Smartphone size={14} className="text-gray-400" /> : <Laptop size={14} className="text-gray-400" />}
+                                                <span className="text-sm text-gray-300 capitalize">{v.deviceType || 'unknown'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-2 text-gray-300">
+                                                <Clock size={14} className="text-secondary" />
+                                                <span className="text-sm">{formatDuration(v.sessionDuration)}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 text-right">
                                             <button
-                                                onClick={() => copyToClipboard(getVisitorKey(v, index, 'desktop'), v.ip)}
-                                                className="p-2 rounded-lg bg-white/5 hover:bg-secondary/20 border border-white/10 hover:border-secondary/50 transition-all duration-300"
-                                                title="Copy IP"
+                                                onClick={() => setSelectedVisitor(v)}
+                                                className="px-4 py-2 rounded-lg bg-white/5 hover:bg-secondary/20 text-gray-300 hover:text-white text-xs font-bold transition-all"
                                             >
-                                                {copiedVisitorKey === getVisitorKey(v, index, 'desktop') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
+                                                Details
                                             </button>
-                                        </div>
-                                        <span className="text-[10px] text-gray-500 font-mono mt-1 block truncate max-w-[220px]">{v.userAgent}</span>
-                                    </td>
-                                    <td className="py-4">
-                                        <p className="text-white text-sm font-medium">{v.city || 'Unknown'}</p>
-                                        <p className="text-[10px] text-gray-500 uppercase">{v.country || 'Unknown'}</p>
-                                    </td>
-                                    <td className="py-4">
-                                        <div className="flex items-center gap-2">
-                                            {v.deviceType === 'mobile' ? <Smartphone size={14} className="text-gray-400" /> : <Laptop size={14} className="text-gray-400" />}
-                                            <span className="text-sm text-gray-300 capitalize">{v.deviceType || 'unknown'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4">
-                                        <div className="flex items-center gap-2 text-gray-300">
-                                            <Clock size={14} className="text-secondary" />
-                                            <span className="text-sm">{formatDuration(v.sessionDuration)}</span>
-                                        </div>
-                                    </td>
-                                    <td className="py-4 text-right">
-                                        <button
-                                            onClick={() => setSelectedVisitor(v)}
-                                            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-secondary/20 text-gray-300 hover:text-white text-xs font-bold transition-all"
-                                        >
-                                            Details
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                    </>
+                                );
+
+                                if (!animateRows) {
+                                    return <tr key={rowKey} className="group hover:bg-white/5 transition-colors">{rowContent}</tr>;
+                                }
+
+                                return (
+                                    <motion.tr
+                                        key={rowKey}
+                                        layout
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.2, delay: Math.min(index * 0.015, 0.24) }}
+                                        className="group hover:bg-white/5 transition-colors"
+                                    >
+                                        {rowContent}
+                                    </motion.tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                     </div>
@@ -627,39 +1063,53 @@ const Analytics = () => {
 
                 {(!isMobile || mobileSections.visitors) && (
                     <div className="md:hidden space-y-3">
-                    {visits.map((v, index) => (
-                        <div key={v.id || `${v.ip}-${index}`} className="p-4 rounded-xl border border-white/10 bg-black/20">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-white font-semibold truncate">{v.ip}</p>
-                                    <p className="text-xs text-gray-500 truncate">{v.userAgent}</p>
-                                </div>
-                                <button
-                                    onClick={() => copyToClipboard(getVisitorKey(v, index, 'mobile'), v.ip)}
-                                    className="p-2 rounded-lg bg-white/5 border border-white/10"
-                                    title="Copy IP"
+                        <AnimatePresence initial={false}>
+                            {deferredVisits.map((v, index) => (
+                                <motion.div
+                                    key={v.id || `${v.ip}-${index}`}
+                                    layout
+                                    initial={animateRows ? { opacity: 0, y: 8 } : false}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={animateRows ? { opacity: 0, y: -8 } : undefined}
+                                    transition={{ duration: 0.22, delay: animateRows ? Math.min(index * 0.02, 0.22) : 0 }}
+                                    className="p-4 rounded-xl border border-white/10 bg-black/20"
                                 >
-                                    {copiedVisitorKey === getVisitorKey(v, index, 'mobile') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
-                                </button>
-                            </div>
-                            <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                                <div>
-                                    <p className="text-gray-500 uppercase tracking-wide">Location</p>
-                                    <p className="text-gray-300">{v.city || 'Unknown'}, {v.country || 'Unknown'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-500 uppercase tracking-wide">Session</p>
-                                    <p className="text-gray-300">{formatDuration(v.sessionDuration)}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setSelectedVisitor(v)}
-                                className="mt-3 w-full py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold"
-                            >
-                                View Details
-                            </button>
-                        </div>
-                    ))}
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="text-white font-semibold truncate">{v.ip}</p>
+                                            <p className="text-xs text-gray-500 truncate">{v.userAgent}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => copyToClipboard(getVisitorKey(v, index, 'mobile'), v.ip)}
+                                            className="p-2 rounded-lg bg-white/5 border border-white/10"
+                                            title="Copy IP"
+                                        >
+                                            {copiedVisitorKey === getVisitorKey(v, index, 'mobile') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
+                                        </button>
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                                        <div>
+                                            <p className="text-gray-500 uppercase tracking-wide">Location</p>
+                                            <p className="text-gray-300">{v.city || 'Unknown'}, {v.country || 'Unknown'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-500 uppercase tracking-wide">Session</p>
+                                            <p className="text-gray-300">{formatDuration(v.sessionDuration)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-gray-500">
+                                        <span className="truncate">{v.pageViewed || '/'}</span>
+                                        <span>{v.timestamp ? new Date(v.timestamp).toLocaleString() : 'Unknown time'}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedVisitor(v)}
+                                        className="mt-3 w-full py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 text-xs font-bold"
+                                    >
+                                        View Details
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </div>
                 )}
             </motion.div>
@@ -670,6 +1120,7 @@ const Analytics = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        data-lenis-prevent
                         className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/60"
                         onClick={() => setSelectedVisitor(null)}
                     >
@@ -697,7 +1148,7 @@ const Analytics = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[420px] overflow-y-auto pr-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[420px] overflow-y-auto pr-1" data-lenis-prevent>
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Location</p>
                                     <div className="flex items-center gap-2">
@@ -710,6 +1161,9 @@ const Analytics = () => {
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Network</p>
                                     <span className="text-white font-medium block truncate">{selectedVisitor.isp || 'Unknown ISP'}</span>
                                     <p className="text-[10px] text-gray-500 mt-1 uppercase">{selectedVisitor.connectionType || 'unknown'}</p>
+                                    <p className={`text-[10px] mt-1 uppercase ${selectedVisitor.isVpn ? 'text-red-300' : 'text-emerald-300'}`}>
+                                        {selectedVisitor.isVpn ? 'VPN / Proxy Detected' : 'Direct Network'}
+                                    </p>
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Session Duration</p>
@@ -721,6 +1175,13 @@ const Analytics = () => {
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Coordinates</p>
                                     <p className="text-sm text-gray-300 font-mono">{selectedVisitor.latitude}, {selectedVisitor.longitude}</p>
+                                </div>
+                                <div className="sm:col-span-2 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Visit Record</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        <p className="text-gray-300"><span className="text-gray-500">Visited Page:</span> {selectedVisitor.pageViewed || '/'}</p>
+                                        <p className="text-gray-300"><span className="text-gray-500">Visited At:</span> {selectedVisitor.timestamp ? new Date(selectedVisitor.timestamp).toLocaleString() : 'Unknown'}</p>
+                                    </div>
                                 </div>
                                 <div className="sm:col-span-2 p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Browser Agent</p>
@@ -738,6 +1199,7 @@ const Analytics = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        data-lenis-prevent
                         className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/60"
                     >
                         <motion.div

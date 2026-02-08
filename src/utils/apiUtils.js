@@ -6,6 +6,35 @@
  * @param {number} initialDelay - Initial delay in ms (default: 1000)
  * @returns {Promise} The fetch response
  */
+const DEFAULT_FETCH_TIMEOUT_MS = 12000;
+
+const createTimeoutSignal = (externalSignal, timeoutMs) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+        controller.abort(new DOMException(`Timed out after ${timeoutMs}ms`, 'AbortError'));
+    }, timeoutMs);
+
+    let abortListener = null;
+    if (externalSignal) {
+        if (externalSignal.aborted) {
+            controller.abort(externalSignal.reason);
+        } else {
+            abortListener = () => controller.abort(externalSignal.reason);
+            externalSignal.addEventListener('abort', abortListener, { once: true });
+        }
+    }
+
+    return {
+        signal: controller.signal,
+        cleanup: () => {
+            clearTimeout(timer);
+            if (externalSignal && abortListener) {
+                externalSignal.removeEventListener('abort', abortListener);
+            }
+        }
+    };
+};
+
 export const fetchWithRetry = async (
     url,
     options = {},
@@ -13,10 +42,12 @@ export const fetchWithRetry = async (
     initialDelay = 1000
 ) => {
     let lastError;
+    const { timeoutMs = DEFAULT_FETCH_TIMEOUT_MS, ...fetchOptions } = options;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const { signal, cleanup } = createTimeoutSignal(fetchOptions.signal, timeoutMs);
         try {
-            const response = await fetch(url, options);
+            const response = await fetch(url, { ...fetchOptions, signal });
 
             // Don't retry on client errors (4xx)
             if (response.status >= 400 && response.status < 500) {
@@ -29,10 +60,12 @@ export const fetchWithRetry = async (
 
             return response;
         } catch (error) {
-            lastError = error;
+            lastError = error?.name === 'AbortError'
+                ? new Error(`Request timed out after ${timeoutMs}ms`)
+                : error;
             console.warn(
                 `Fetch attempt ${attempt + 1}/${maxRetries + 1} failed for ${url}:`,
-                error.message
+                lastError.message
             );
 
             if (attempt < maxRetries) {
@@ -40,6 +73,8 @@ export const fetchWithRetry = async (
                 const delay = initialDelay * Math.pow(2, attempt);
                 await new Promise((resolve) => setTimeout(resolve, delay));
             }
+        } finally {
+            cleanup();
         }
     }
 
