@@ -234,11 +234,60 @@
     "ip_logs": [],
     "reelClicks": {},
     "sessionDurations": {
-      "8a0b14b3-ee50-4a15-8517-c9d97ca5a327": 156,
-      "230fcb1a-1b26-4ed8-9126-00abdedd1951": 102,
-      "ea0036fc-024b-467f-a132-793be2505399": 190
+      "26208c00-f5d5-4687-8f28-61bacec20c08": 55
     },
-    "clearedAt": "2026-02-08T09:58:24.499Z",
+    "profileOverrides": {
+      "26208c00-f5d5-4687-8f28-61bacec20c08": {
+        "country": "United States",
+        "city": "Mountain View",
+        "region": "California",
+        "latitude": 37.38605,
+        "longitude": -122.08385,
+        "isp": "Google LLC",
+        "isVpn": false,
+        "connectionType": "datacenter",
+        "timezone": "America/Los_Angeles",
+        "isCrawler": true,
+        "isBot": true,
+        "botName": "Googlebot",
+        "botReason": "ua-match:Googlebot",
+        "botConfidence": 0.86,
+        "visitorKind": "bot",
+        "visitorEmoji": "🤖",
+        "profileSource": "ipapi.is",
+        "pageViewed": "/reels",
+        "pageHistory": [
+          "/",
+          "/reels"
+        ],
+        "updatedAt": "2026-02-08T16:53:38.842Z"
+      },
+      "15270902-ccc0-4718-8ec9-8f0788e2af57": {
+        "country": "India",
+        "city": "Surat",
+        "region": "Gujarat",
+        "latitude": 21.16676,
+        "longitude": 72.8334,
+        "isp": "Ishan Netsol Pvt Ltd",
+        "isVpn": false,
+        "connectionType": "wifi",
+        "timezone": "Asia/Kolkata",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "ipapi.is",
+        "pageViewed": "/admin",
+        "pageHistory": [
+          "/admin"
+        ],
+        "updatedAt": "2026-02-08T16:53:46.638Z"
+      }
+    },
+    "clearedAt": "2026-02-08T16:53:36.167Z",
     "stats": {
       "total_visitors": 0,
       "unique_visitors": 0,
@@ -250,7 +299,148 @@
       "average_session_seconds": 0
     }
   },
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "7ec2c56f-f6ae-49ef-b7b2-bf05a5ac22c1",
+      "type": "info",
+      "title": "Analytics Cleared",
+      "message": "All analytics data was cleared",
+      "ip": null,
+      "metadata": null,
+      "timestamp": "2026-02-08T16:53:36.169Z",
+      "read": false
+    },
+    {
+      "id": "32c8bb03-52d5-483a-8eea-66b35cae7635",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:53:33.888Z",
+      "read": false
+    },
+    {
+      "id": "5b001742-4429-435a-9396-28901ab53a91",
+      "type": "info",
+      "title": "Analytics Cleared",
+      "message": "All analytics data was cleared",
+      "ip": null,
+      "metadata": null,
+      "timestamp": "2026-02-08T16:51:53.506Z",
+      "read": false
+    },
+    {
+      "id": "773a3c0d-44d0-4cfb-97d5-8f3c65d57c61",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:51:51.495Z",
+      "read": false
+    },
+    {
+      "id": "7d6526b3-a46d-49bf-8798-8ef1afced947",
+      "type": "info",
+      "title": "Analytics Cleared",
+      "message": "All analytics data was cleared",
+      "ip": null,
+      "metadata": null,
+      "timestamp": "2026-02-08T16:50:45.778Z",
+      "read": false
+    },
+    {
+      "id": "08ea1c6f-f61f-4e16-850f-e143b0205a07",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:50:45.749Z",
+      "read": false
+    },
+    {
+      "id": "a4b96266-4cc8-4a3e-a155-25f8bb5b7101",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: 202.179.159.248",
+      "ip": "202.179.159.248",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:36:19.033Z",
+      "read": false
+    },
+    {
+      "id": "70faa7f9-f180-4595-acf4-2cf1dadd4422",
+      "type": "info",
+      "title": "Analytics Cleared",
+      "message": "All analytics data was cleared",
+      "ip": null,
+      "metadata": null,
+      "timestamp": "2026-02-08T16:34:56.293Z",
+      "read": false
+    },
+    {
+      "id": "164adfb5-e6f1-485a-a87a-222f2a79db3c",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: 202.179.159.248",
+      "ip": "202.179.159.248",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:34:24.811Z",
+      "read": false
+    },
+    {
+      "id": "52cf5ecf-508e-4731-8764-83279c44097b",
+      "type": "info",
+      "title": "Analytics Cleared",
+      "message": "All analytics data was cleared",
+      "ip": null,
+      "metadata": null,
+      "timestamp": "2026-02-08T16:19:06.776Z",
+      "read": false
+    },
+    {
+      "id": "e31e6481-cdf8-4655-a0e5-093e6339c79d",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:19:06.744Z",
+      "read": false
+    },
+    {
+      "id": "cc063293-116e-4e24-801f-19406bea7d86",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:17:46.360Z",
+      "read": false
+    },
+    {
+      "id": "475b6524-03a8-4128-814d-3f02607f478a",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: ::1",
+      "ip": "::1",
+      "metadata": null,
+      "timestamp": "2026-02-08T16:12:14.680Z",
+      "read": false
+    },
+    {
+      "id": "6ff64083-1e79-4984-9cbe-1c34c339209d",
+      "type": "info",
+      "title": "Analytics Cleared",
+      "message": "All analytics data was cleared",
+      "ip": null,
+      "metadata": null,
+      "timestamp": "2026-02-08T15:04:03.679Z",
+      "read": false
+    }
+  ],
   "contentHistory": [
     {
       "id": "f3670975-15f4-4db1-a9b8-e7fc66f150db",

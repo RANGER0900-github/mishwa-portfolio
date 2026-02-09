@@ -238,7 +238,7 @@ const Notifications = () => {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="absolute top-full mt-2 right-0 w-full sm:w-56 bg-[#0d1b2a] border border-white/10 rounded-xl overflow-hidden z-10 shadow-xl"
+                                    className="absolute top-full mt-2 right-0 w-full sm:w-56 bg-[#0d1b2a] border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl"
                                 >
                                     {filterOptions.map(opt => (
                                         <button
@@ -402,7 +402,7 @@ const Notifications = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <div className="self-end sm:self-auto flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                         {!notification.read && (
                                             <motion.button
                                                 onClick={() => markAsRead(notification.id)}

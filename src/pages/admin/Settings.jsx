@@ -106,8 +106,8 @@ const Settings = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-            <Toaster position="bottom-right" toastOptions={{
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-4">
+            <Toaster position="top-center" toastOptions={{
                 style: {
                     background: '#112240',
                     color: '#fff',

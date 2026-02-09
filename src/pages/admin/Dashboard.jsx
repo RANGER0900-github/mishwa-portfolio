@@ -274,10 +274,10 @@ const Dashboard = () => {
                     </div>
                     <div className="space-y-3">
                         {topCountries.length > 0 ? topCountries.map(([country, count], i) => (
-                            <div key={country} className="flex items-center justify-between gap-3">
-                                <span className="text-gray-300">{country}</span>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-24 h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div key={country} className="flex items-center justify-between gap-3 min-w-0">
+                                <span className="text-gray-300 truncate">{country}</span>
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="w-20 sm:w-24 h-2 bg-white/5 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-gradient-to-r from-secondary to-primary rounded-full"
                                             style={{ width: `${(count / (topCountries[0]?.[1] || 1)) * 100}%` }}

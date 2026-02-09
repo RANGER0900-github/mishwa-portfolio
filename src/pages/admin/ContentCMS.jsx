@@ -422,7 +422,7 @@ const ContentCMS = () => {
                     </motion.div>
 
                     <motion.div 
-                        className="mt-6 flex gap-3"
+                        className="mt-6 flex flex-col sm:flex-row gap-3"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 }}
@@ -453,8 +453,8 @@ const ContentCMS = () => {
     };
 
     return (
-        <div className="max-w-7xl mx-auto pb-20 overflow-x-hidden">
-            <Toaster position="bottom-right" toastOptions={{
+        <div className="max-w-7xl mx-auto pb-24 sm:pb-20 overflow-x-hidden">
+            <Toaster position="top-center" toastOptions={{
                 style: { background: '#112240', color: '#64ffda', border: '1px solid rgba(100,255,218,0.2)' }
             }} />
 
@@ -481,7 +481,7 @@ const ContentCMS = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.9 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                        className="fixed bottom-28 sm:bottom-6 right-4 sm:right-8 z-40"
+                        className="fixed bottom-[calc(env(safe-area-inset-bottom,0)+5.4rem)] sm:bottom-6 left-3 right-3 sm:left-auto sm:right-8 z-[45]"
                     >
                         <motion.button
                             onClick={() => {
@@ -491,7 +491,7 @@ const ContentCMS = () => {
                             disabled={saving}
                             whileHover={{ scale: 1.08, boxShadow: '0 0 30px rgba(100,255,218,0.5)' }}
                             whileTap={{ scale: 0.95 }}
-                            className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-secondary text-black font-bold rounded-2xl hover:shadow-2xl transition-all disabled:opacity-50 shadow-[0_0_25px_rgba(100,255,218,0.4)] uppercase text-sm tracking-wider"
+                            className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-4 bg-gradient-to-r from-primary to-secondary text-black font-bold rounded-2xl hover:shadow-2xl transition-all disabled:opacity-50 shadow-[0_0_25px_rgba(100,255,218,0.4)] uppercase text-sm tracking-wider"
                         >
                             <motion.div
                                 animate={{ rotate: saving ? 360 : 0 }}
@@ -505,12 +505,12 @@ const ContentCMS = () => {
                 )}
             </AnimatePresence>
 
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mb-8">
+            <div data-lenis-prevent className="flex sm:flex-wrap gap-2 sm:gap-3 mb-8 overflow-x-auto sm:overflow-visible pb-2">
                 {['projects', 'archive', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer', 'history'].map(tab => (
                     <motion.button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-3 py-2 sm:px-5 sm:py-3 rounded-xl font-bold uppercase tracking-wider transition-all border text-[11px] sm:text-sm text-center ${activeTab === tab
+                        className={`whitespace-nowrap px-3 py-2 sm:px-5 sm:py-3 rounded-xl font-bold uppercase tracking-wider transition-all border text-[11px] sm:text-sm text-center ${activeTab === tab
                             ? 'bg-white/10 border-primary text-primary shadow-[0_0_15px_rgba(100,255,218,0.2)]'
                             : 'bg-transparent border-white/10 text-gray-500 hover:text-white'
                             }`}
@@ -545,7 +545,7 @@ const ContentCMS = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="flex gap-2 mt-3">
+                                        <div className="flex flex-col sm:flex-row gap-2 mt-3">
                                             <motion.button onClick={() => triggerUpload('project', project.id)} disabled={uploading === getUploadKey('project', project.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-secondary/20 border border-white/10 hover:border-secondary/50 rounded-lg text-gray-400 hover:text-secondary transition-all text-xs font-bold disabled:opacity-60" whileHover={{ scale: 1.02 }}>
                                                 <Upload size={14} /> Upload
                                             </motion.button>

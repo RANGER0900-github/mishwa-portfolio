@@ -100,6 +100,20 @@ const formatDuration = (seconds) => {
     return `${Math.floor(safeSeconds / 60)}m ${safeSeconds % 60}s`;
 };
 
+const getVisitorIdentity = (visitor) => {
+    const isBot = Boolean(visitor?.isBot ?? visitor?.isCrawler);
+    const emoji = visitor?.visitorEmoji || (isBot ? '🤖' : '🧑');
+    const label = visitor?.visitorKind || (isBot ? 'bot' : 'human');
+    return {
+        isBot,
+        emoji,
+        label: String(label).toUpperCase(),
+        className: isBot
+            ? 'border-amber-400/40 text-amber-200 bg-amber-500/10'
+            : 'border-emerald-400/40 text-emerald-200 bg-emerald-500/10'
+    };
+};
+
 const Analytics = () => {
     const { content } = useContent();
     const [data, setData] = useState(null);
@@ -379,6 +393,10 @@ const Analytics = () => {
     const pickerDays = useMemo(() => getMonthGrid(pickerMonth), [pickerMonth]);
     const rangeStart = fromParsed && toParsed ? Math.min(getDayStamp(fromParsed), getDayStamp(toParsed)) : null;
     const rangeEnd = fromParsed && toParsed ? Math.max(getDayStamp(fromParsed), getDayStamp(toParsed)) : null;
+    const selectedIdentity = selectedVisitor ? getVisitorIdentity(selectedVisitor) : null;
+    const selectedPageHistory = selectedVisitor
+        ? Array.from(new Set([...(selectedVisitor.pageHistory || []), selectedVisitor.pageViewed || '/'])).filter(Boolean)
+        : [];
 
     const updateZoom = (delta) => {
         setMapZoom((prev) => clamp(Number((prev + delta).toFixed(2)), 1, 8));
@@ -434,7 +452,7 @@ const Analytics = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                    <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 w-full sm:w-auto">
                         <div ref={datePickerRef} className="relative w-full sm:w-[430px]">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <motion.button
@@ -476,7 +494,9 @@ const Analytics = () => {
                                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
                                         transition={{ duration: 0.24, ease: 'easeOut' }}
                                         data-lenis-prevent
-                                        className="absolute z-30 mt-3 left-0 right-0 sm:right-auto sm:w-[560px] rounded-2xl border border-secondary/20 bg-[#081629]/95 backdrop-blur-2xl shadow-[0_24px_70px_rgba(0,0,0,0.45)] p-4 overflow-hidden"
+                                        className={isMobile
+                                            ? 'fixed z-[90] left-3 right-3 bottom-[calc(env(safe-area-inset-bottom,0)+5.25rem)] max-h-[68vh] overflow-y-auto rounded-2xl border border-secondary/20 bg-[#081629]/95 backdrop-blur-2xl shadow-[0_24px_70px_rgba(0,0,0,0.45)] p-4'
+                                            : 'absolute z-30 mt-3 left-0 right-0 sm:right-auto sm:w-[560px] rounded-2xl border border-secondary/20 bg-[#081629]/95 backdrop-blur-2xl shadow-[0_24px_70px_rgba(0,0,0,0.45)] p-4 overflow-hidden'}
                                     >
                                         <div className="absolute -top-16 -right-10 h-32 w-32 rounded-full bg-secondary/15 blur-3xl pointer-events-none"></div>
                                         <div className="absolute -bottom-16 -left-8 h-28 w-28 rounded-full bg-primary/15 blur-3xl pointer-events-none"></div>
@@ -612,7 +632,7 @@ const Analytics = () => {
                                     setToDate('');
                                     setSearchInput('');
                                 }}
-                                className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all text-sm"
+                                className="w-full sm:w-auto px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:text-white hover:border-white/30 transition-all text-sm"
                             >
                                 Clear Filters
                             </button>
@@ -645,7 +665,7 @@ const Analytics = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {[
                     { label: 'Total Visits', value: stats.total_visitors ?? visits.length, icon: Users, color: 'text-secondary' },
                     { label: 'Unique Visitors', value: stats.unique_visitors ?? new Set(visits.map((v) => v.ip)).size, icon: Globe, color: 'text-blue-400' },
@@ -681,7 +701,7 @@ const Analytics = () => {
                         </h3>
                         <p className="text-xs uppercase tracking-widest text-gray-400">Premium Search Result</p>
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
                         <div className="p-3 rounded-xl bg-black/20 border border-white/10">
                             <p className="text-gray-500 uppercase tracking-wide">Visits</p>
                             <p className="text-white font-bold text-sm mt-1">{ipSummary.visits}</p>
@@ -814,7 +834,7 @@ const Analytics = () => {
                         <p className="text-sm text-gray-500">Drag to pan and use controls to zoom.</p>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/10">
+                    <div className="flex flex-wrap items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/10">
                         <button
                             onClick={() => updateZoom(0.25)}
                             className="p-2 hover:bg-white/10 rounded-xl transition-colors text-gray-400 hover:text-white disabled:opacity-50"
@@ -905,7 +925,7 @@ const Analytics = () => {
                 )}
             </motion.div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {[
                     { label: 'Wifi/Ethernet', value: wifiCount, icon: Wifi, color: 'text-blue-400' },
                     { label: 'Cellular', value: cellularCount, icon: Radio, color: 'text-purple-400' },
@@ -990,6 +1010,7 @@ const Analytics = () => {
                         <tbody className="divide-y divide-white/5">
                             {deferredVisits.map((v, index) => {
                                 const rowKey = v.id || `${v.ip}-${index}`;
+                                const identity = getVisitorIdentity(v);
                                 const rowContent = (
                                     <>
                                         <td className="py-4">
@@ -1002,6 +1023,9 @@ const Analytics = () => {
                                                 >
                                                     {copiedVisitorKey === getVisitorKey(v, index, 'desktop') ? <Check size={14} className="text-secondary" /> : <Copy size={14} className="text-gray-400" />}
                                                 </button>
+                                                <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold tracking-wide ${identity.className}`}>
+                                                    {identity.emoji} {identity.label}
+                                                </span>
                                             </div>
                                             <span className="text-[10px] text-gray-500 font-mono mt-1 block truncate max-w-[220px]">{v.userAgent}</span>
                                             <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
@@ -1064,7 +1088,9 @@ const Analytics = () => {
                 {(!isMobile || mobileSections.visitors) && (
                     <div className="md:hidden space-y-3">
                         <AnimatePresence initial={false}>
-                            {deferredVisits.map((v, index) => (
+                            {deferredVisits.map((v, index) => {
+                                const identity = getVisitorIdentity(v);
+                                return (
                                 <motion.div
                                     key={v.id || `${v.ip}-${index}`}
                                     layout
@@ -1078,6 +1104,9 @@ const Analytics = () => {
                                         <div className="min-w-0">
                                             <p className="text-white font-semibold truncate">{v.ip}</p>
                                             <p className="text-xs text-gray-500 truncate">{v.userAgent}</p>
+                                            <span className={`mt-1 inline-flex px-2 py-0.5 rounded-full border text-[10px] font-bold tracking-wide ${identity.className}`}>
+                                                {identity.emoji} {identity.label}
+                                            </span>
                                         </div>
                                         <button
                                             onClick={() => copyToClipboard(getVisitorKey(v, index, 'mobile'), v.ip)}
@@ -1108,7 +1137,8 @@ const Analytics = () => {
                                         View Details
                                     </button>
                                 </motion.div>
-                            ))}
+                                );
+                            })}
                         </AnimatePresence>
                     </div>
                 )}
@@ -1145,6 +1175,11 @@ const Analytics = () => {
                                 <div className="min-w-0">
                                     <h3 className="text-2xl sm:text-3xl font-display font-black text-white">Visitor Profile</h3>
                                     <p className="text-secondary font-mono text-sm truncate">{selectedVisitor.ip}</p>
+                                    {selectedIdentity && (
+                                        <span className={`mt-2 inline-flex px-2 py-0.5 rounded-full border text-[10px] font-bold tracking-wide ${selectedIdentity.className}`}>
+                                            {selectedIdentity.emoji} {selectedIdentity.label}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -1166,6 +1201,21 @@ const Analytics = () => {
                                     </p>
                                 </div>
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <p className="text-xs text-gray-500 font-bold uppercase mb-2">Identity Signal</p>
+                                    <p className={`text-sm font-semibold ${selectedIdentity?.isBot ? 'text-amber-300' : 'text-emerald-300'}`}>
+                                        {selectedIdentity ? `${selectedIdentity.emoji} ${selectedIdentity.label}` : 'Unknown'}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500 mt-1 truncate">
+                                        {(selectedVisitor.botName || selectedVisitor.botReason || 'No bot indicators detected')}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500 mt-1 uppercase">
+                                        Confidence: {Math.round((Number(selectedVisitor.botConfidence) || 0) * 100)}%
+                                    </p>
+                                    <p className="text-[10px] text-gray-500 mt-1 uppercase">
+                                        Source: {selectedVisitor.profileSource || 'fallback'}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Session Duration</p>
                                     <div className="flex items-center gap-2 text-gray-300">
                                         <Clock size={16} className="text-purple-400" />
@@ -1181,6 +1231,16 @@ const Analytics = () => {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                                         <p className="text-gray-300"><span className="text-gray-500">Visited Page:</span> {selectedVisitor.pageViewed || '/'}</p>
                                         <p className="text-gray-300"><span className="text-gray-500">Visited At:</span> {selectedVisitor.timestamp ? new Date(selectedVisitor.timestamp).toLocaleString() : 'Unknown'}</p>
+                                    </div>
+                                    <div className="mt-3">
+                                        <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1">Page History</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedPageHistory.length > 0 ? selectedPageHistory.map((pagePath) => (
+                                                <span key={pagePath} className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-300">
+                                                    {pagePath}
+                                                </span>
+                                            )) : <span className="text-xs text-gray-500">No page history available.</span>}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="sm:col-span-2 p-4 bg-white/5 rounded-2xl border border-white/5">

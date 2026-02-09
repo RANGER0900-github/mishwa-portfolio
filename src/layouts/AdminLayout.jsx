@@ -93,7 +93,7 @@ const AdminLayout = () => {
     }
 
     return (
-        <div className="flex min-h-screen bg-black text-white selection:bg-secondary selection:text-black font-sans">
+        <div className="flex min-h-screen bg-black text-white selection:bg-secondary selection:text-black font-sans overflow-x-clip">
             {/* Background Ambience */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] opacity-30"></div>
@@ -101,7 +101,7 @@ const AdminLayout = () => {
             </div>
 
             {/* Mobile Header */}
-            <div className={`md:hidden fixed top-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between ${isCompactScreen ? 'px-4 py-3' : 'px-5 py-4'}`}>
+            <div className={`md:hidden fixed top-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between ${isCompactScreen ? 'px-4 pt-[calc(env(safe-area-inset-top,0)+0.65rem)] pb-3' : 'px-5 pt-[calc(env(safe-area-inset-top,0)+0.85rem)] pb-4'}`}>
                 <h1 className="font-display font-black text-2xl tracking-tighter italic">
                     MISHWA<span className="text-secondary text-3xl">.</span>
                 </h1>
@@ -131,7 +131,7 @@ const AdminLayout = () => {
                 initial={{ x: "-100%" }}
                 animate={{ x: isMobileMenuOpen ? 0 : "-100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="md:hidden fixed top-0 left-0 bottom-0 w-[88%] max-w-sm bg-[#0d1b2a] border-r border-white/10 z-[80] p-6 flex flex-col"
+                className="md:hidden fixed top-0 left-0 bottom-0 w-[88%] max-w-sm bg-[#0d1b2a] border-r border-white/10 z-[80] px-6 pt-[calc(env(safe-area-inset-top,0)+1rem)] pb-[calc(env(safe-area-inset-bottom,0)+1rem)] flex flex-col"
             >
                 <div className="mb-12">
                     <h1 className="font-display font-black text-3xl tracking-tighter italic">
@@ -214,12 +214,12 @@ const AdminLayout = () => {
 
             {/* Main Content */}
             <div className="flex-1 relative z-10 md:ml-72">
-                <main className="p-3 sm:p-6 md:p-10 lg:p-12 pt-20 sm:pt-24 md:pt-10 lg:pt-12 pb-32 sm:pb-28 md:pb-10 max-w-[1600px] mx-auto min-h-screen">
+                <main className="p-3 sm:p-6 md:p-10 lg:p-12 pt-24 sm:pt-24 md:pt-10 lg:pt-12 pb-[calc(env(safe-area-inset-bottom,0)+7.25rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+6.5rem)] md:pb-10 max-w-[1600px] mx-auto min-h-screen">
                     <Outlet />
                 </main>
             </div>
 
-            <div className="md:hidden fixed bottom-2 left-2 right-2 z-[40] bg-[#0d1b2a]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 pb-[calc(env(safe-area-inset-bottom,0)+0.5rem)]">
+            <div className={`md:hidden fixed bottom-2 left-2 right-2 z-[40] bg-[#0d1b2a]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 pb-[calc(env(safe-area-inset-bottom,0)+0.5rem)] transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0 translate-y-8 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
                 <nav className="flex items-center justify-between gap-1">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;

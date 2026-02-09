@@ -758,7 +758,7 @@ const readDB = () => {
             auth: {},
             content: {},
             contentHistory: [],
-            analytics: { visits: [], reelClicks: {}, sessionDurations: {}, clearedAt: null },
+            analytics: { visits: [], reelClicks: {}, sessionDurations: {}, profileOverrides: {}, clearedAt: null },
             notifications: [],
             security: {
                 blockedIps: {},
@@ -777,6 +777,7 @@ const initializeDB = () => {
     if (!db.analytics.reelClicks) db.analytics.reelClicks = {};
     if (!db.analytics.visits) db.analytics.visits = [];
     if (!db.analytics.sessionDurations || typeof db.analytics.sessionDurations !== 'object') db.analytics.sessionDurations = {};
+    if (!db.analytics.profileOverrides || typeof db.analytics.profileOverrides !== 'object') db.analytics.profileOverrides = {};
     if (!db.analytics.clearedAt) db.analytics.clearedAt = null;
     if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
     if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
@@ -863,39 +864,260 @@ const getClientIP = (req) => {
     return req.ip || req.socket?.remoteAddress || 'Unknown';
 };
 
+const GEO_FALLBACK = {
+    country: 'Unknown',
+    city: 'Unknown',
+    region: 'Unknown',
+    latitude: 0,
+    longitude: 0,
+    isp: 'Unknown',
+    isVpn: false,
+    connectionType: 'unknown',
+    timezone: 'Unknown',
+    isCrawler: false,
+    source: 'fallback'
+};
+
+const fetchJsonWithTimeout = async (url, timeoutMs = 4500) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return await response.json();
+    } finally {
+        clearTimeout(timer);
+    }
+};
+
+const normalizeGeoData = (payload = {}) => ({
+    country: payload.country || GEO_FALLBACK.country,
+    city: payload.city || GEO_FALLBACK.city,
+    region: payload.region || GEO_FALLBACK.region,
+    latitude: Number(payload.latitude ?? payload.lat ?? GEO_FALLBACK.latitude) || 0,
+    longitude: Number(payload.longitude ?? payload.lon ?? GEO_FALLBACK.longitude) || 0,
+    isp: payload.isp || GEO_FALLBACK.isp,
+    isVpn: Boolean(payload.isVpn),
+    connectionType: payload.connectionType || GEO_FALLBACK.connectionType,
+    timezone: payload.timezone || GEO_FALLBACK.timezone,
+    isCrawler: Boolean(payload.isCrawler),
+    source: payload.source || GEO_FALLBACK.source
+});
+
+const fetchGeoFromIpapiis = async (ip) => {
+    const data = await fetchJsonWithTimeout(`https://api.ipapi.is/?q=${encodeURIComponent(ip)}`);
+    if (!data || data.is_bogon) {
+        throw new Error('Bogon or invalid response');
+    }
+    return normalizeGeoData({
+        country: data.location?.country,
+        city: data.location?.city,
+        region: data.location?.state,
+        latitude: data.location?.latitude,
+        longitude: data.location?.longitude,
+        isp: data.company?.name || data.asn?.org,
+        isVpn: Boolean(data.is_vpn || data.is_proxy || data.is_tor),
+        connectionType: data.is_mobile ? 'cellular' : (data.is_datacenter ? 'datacenter' : 'wifi'),
+        timezone: data.location?.timezone,
+        isCrawler: Boolean(data.is_crawler),
+        source: 'ipapi.is'
+    });
+};
+
+const fetchGeoFromIpApi = async (ip) => {
+    const data = await fetchJsonWithTimeout(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,city,regionName,lat,lon,isp,mobile,proxy,hosting,timezone,query`);
+    if (!data || data.status !== 'success') {
+        throw new Error(data?.message || 'ip-api lookup failed');
+    }
+    return normalizeGeoData({
+        country: data.country,
+        city: data.city,
+        region: data.regionName,
+        latitude: data.lat,
+        longitude: data.lon,
+        isp: data.isp,
+        isVpn: Boolean(data.proxy || data.hosting),
+        connectionType: data.mobile ? 'cellular' : 'wifi',
+        timezone: data.timezone,
+        source: 'ip-api'
+    });
+};
+
+const fetchGeoFromIpwhois = async (ip) => {
+    const data = await fetchJsonWithTimeout(`https://ipwho.is/${encodeURIComponent(ip)}`);
+    if (!data || data.success === false) {
+        throw new Error(data?.message || 'ipwho.is lookup failed');
+    }
+    return normalizeGeoData({
+        country: data.country,
+        city: data.city,
+        region: data.region,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        isp: data.connection?.isp || data.connection?.org,
+        isVpn: Boolean(data.security?.vpn || data.security?.proxy || data.security?.tor),
+        connectionType: data.connection?.type || 'unknown',
+        timezone: data.timezone?.id,
+        source: 'ipwho.is'
+    });
+};
+
+const GEO_PROVIDERS = [
+    fetchGeoFromIpapiis,
+    fetchGeoFromIpApi,
+    fetchGeoFromIpwhois
+];
+
 // Fetch geolocation
 const fetchGeoData = async (ip) => {
-    if (ip === '::1' || ip === '127.0.0.1' || ip === 'localhost' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    if (isLocalOrPrivateIp(ip)) {
         return {
-            country: 'Localhost', city: 'Development Machine', region: 'Local',
-            latitude: 0, longitude: 0, isp: 'Localhost',
-            isVpn: false, connectionType: 'ethernet',
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            country: 'Localhost',
+            city: 'Development Machine',
+            region: 'Local',
+            latitude: 0,
+            longitude: 0,
+            isp: 'Localhost',
+            isVpn: false,
+            connectionType: 'ethernet',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            isCrawler: false,
+            source: 'local'
         };
     }
-    try {
-        const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,message,country,city,regionName,lat,lon,isp,mobile,proxy,hosting,timezone`);
-        const data = await response.json();
-        if (data.status === 'success') {
-            return {
-                country: data.country || 'Unknown', city: data.city || 'Unknown',
-                region: data.regionName || 'Unknown', latitude: data.lat || 0,
-                longitude: data.lon || 0, isp: data.isp || 'Unknown',
-                isVpn: data.proxy || data.hosting || false,
-                connectionType: data.mobile ? 'cellular' : 'wifi',
-                timezone: data.timezone || 'Unknown'
-            };
+
+    for (const provider of GEO_PROVIDERS) {
+        try {
+            const result = await provider(ip);
+            if (result && result.country && result.country !== 'Unknown') {
+                return result;
+            }
+        } catch (error) {
+            console.warn(`Geo provider failed (${provider.name}):`, error.message);
         }
-    } catch (error) {
-        console.error('Geolocation API error:', error);
     }
-    return { country: 'Unknown', city: 'Unknown', region: 'Unknown', latitude: 0, longitude: 0, isp: 'Unknown', isVpn: false, connectionType: 'unknown', timezone: 'Unknown' };
+
+    return { ...GEO_FALLBACK };
 };
 
 const getDeviceType = (userAgent) => {
     if (!userAgent) return 'unknown';
     if (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) return 'mobile';
     return 'desktop';
+};
+
+const BOT_NAME_PATTERNS = [
+    ['Googlebot', /googlebot/i],
+    ['Bingbot', /bingbot|bingpreview/i],
+    ['YandexBot', /yandex(bot)?/i],
+    ['DuckDuckBot', /duckduckbot/i],
+    ['Baiduspider', /baiduspider/i],
+    ['SemrushBot', /semrushbot/i],
+    ['AhrefsBot', /ahrefsbot/i],
+    ['Applebot', /applebot/i],
+    ['Meta Bot', /facebookexternalhit|facebot/i],
+    ['Twitter Bot', /twitterbot/i],
+    ['Telegram Bot', /telegrambot/i],
+    ['Discord Bot', /discordbot/i],
+    ['Crawler', /\b(bot|crawler|spider|crawl|slurp)\b/i],
+    ['Scripted Client', /\b(curl|wget|python-requests|axios|scrapy|httpclient)\b/i]
+];
+
+const detectBotFromUserAgent = (userAgent = '') => {
+    const normalized = String(userAgent || '').trim();
+    if (!normalized) {
+        return {
+            isBot: false,
+            botName: null,
+            reason: 'user-agent-empty',
+            confidence: 0.1
+        };
+    }
+
+    for (const [botName, pattern] of BOT_NAME_PATTERNS) {
+        if (pattern.test(normalized)) {
+            return {
+                isBot: true,
+                botName,
+                reason: `ua-match:${botName}`,
+                confidence: 0.86
+            };
+        }
+    }
+
+    return {
+        isBot: false,
+        botName: null,
+        reason: 'ua-looks-human',
+        confidence: 0.78
+    };
+};
+
+const buildVisitorIdentity = ({ userAgent, geoData }) => {
+    const uaDetection = detectBotFromUserAgent(userAgent);
+    const providerCrawlerSignal = Boolean(geoData?.isCrawler);
+    const isBot = providerCrawlerSignal || uaDetection.isBot;
+    const botName = providerCrawlerSignal ? (uaDetection.botName || 'Network Crawler') : uaDetection.botName;
+    const reason = providerCrawlerSignal
+        ? `ip-intelligence:${geoData?.source || 'unknown'}`
+        : uaDetection.reason;
+    const confidence = providerCrawlerSignal
+        ? 0.95
+        : uaDetection.confidence;
+
+    return {
+        isBot,
+        isCrawler: providerCrawlerSignal || uaDetection.isBot,
+        botName: isBot ? botName : null,
+        botReason: reason,
+        botConfidence: confidence,
+        visitorKind: isBot ? 'bot' : 'human',
+        visitorEmoji: isBot ? '🤖' : '🧑'
+    };
+};
+
+const ensureAnalyticsContainers = (db) => {
+    if (!db.analytics || typeof db.analytics !== 'object') db.analytics = {};
+    if (!Array.isArray(db.analytics.visits)) db.analytics.visits = [];
+    if (!db.analytics.reelClicks || typeof db.analytics.reelClicks !== 'object') db.analytics.reelClicks = {};
+    if (!db.analytics.sessionDurations || typeof db.analytics.sessionDurations !== 'object') db.analytics.sessionDurations = {};
+    if (!db.analytics.profileOverrides || typeof db.analytics.profileOverrides !== 'object') db.analytics.profileOverrides = {};
+};
+
+const persistVisitProfileOverride = (visitId, profile) => {
+    if (!visitId || !profile || typeof profile !== 'object') return;
+    try {
+        const db = readDB();
+        ensureAnalyticsContainers(db);
+        const existing = db.analytics.profileOverrides[visitId] || {};
+        const mergedPageHistory = Array.from(new Set([
+            ...(Array.isArray(existing.pageHistory) ? existing.pageHistory : []),
+            ...(Array.isArray(profile.pageHistory) ? profile.pageHistory : [])
+        ])).slice(-30);
+
+        db.analytics.profileOverrides[visitId] = {
+            ...existing,
+            ...profile,
+            pageHistory: mergedPageHistory,
+            updatedAt: new Date().toISOString()
+        };
+
+        const entries = Object.entries(db.analytics.profileOverrides);
+        if (entries.length > 5000) {
+            entries
+                .sort((a, b) => new Date(b[1]?.updatedAt || 0).getTime() - new Date(a[1]?.updatedAt || 0).getTime())
+                .slice(5000)
+                .forEach(([id]) => {
+                    delete db.analytics.profileOverrides[id];
+                });
+        }
+
+        writeDB(db);
+    } catch (error) {
+        console.warn('Failed to persist visitor profile override:', error.message);
+    }
 };
 
 const mapSupabaseVisit = (visit) => ({
@@ -915,7 +1137,16 @@ const mapSupabaseVisit = (visit) => ({
     timezone: visit.timezone,
     pageViewed: visit.page_viewed,
     reelId: visit.reel_id,
-    sessionDuration: Number(visit.session_duration || 0)
+    sessionDuration: Number(visit.session_duration || 0),
+    isCrawler: Boolean(visit.is_crawler ?? visit.isCrawler ?? false),
+    isBot: Boolean(visit.is_bot ?? visit.isBot ?? visit.is_crawler ?? visit.isCrawler ?? false),
+    botName: visit.bot_name || visit.botName || null,
+    botReason: visit.bot_reason || visit.botReason || null,
+    botConfidence: Number(visit.bot_confidence ?? visit.botConfidence ?? 0) || 0,
+    visitorKind: visit.visitor_kind || visit.visitorKind || null,
+    visitorEmoji: visit.visitor_emoji || visit.visitorEmoji || null,
+    profileSource: visit.profile_source || visit.profileSource || null,
+    pageHistory: Array.isArray(visit.page_history) ? visit.page_history : (Array.isArray(visit.pageHistory) ? visit.pageHistory : [])
 });
 
 const mapLocalVisit = (visit) => ({
@@ -935,7 +1166,101 @@ const mapLocalVisit = (visit) => ({
     timezone: visit.timezone,
     pageViewed: visit.pageViewed || visit.page_viewed,
     reelId: visit.reelId || visit.reel_id,
-    sessionDuration: Number(visit.sessionDuration ?? visit.session_duration ?? 0)
+    sessionDuration: Number(visit.sessionDuration ?? visit.session_duration ?? 0),
+    isCrawler: Boolean(visit.isCrawler ?? visit.is_crawler ?? false),
+    isBot: Boolean(visit.isBot ?? visit.is_bot ?? visit.isCrawler ?? visit.is_crawler ?? false),
+    botName: visit.botName || visit.bot_name || null,
+    botReason: visit.botReason || visit.bot_reason || null,
+    botConfidence: Number(visit.botConfidence ?? visit.bot_confidence ?? 0) || 0,
+    visitorKind: visit.visitorKind || visit.visitor_kind || null,
+    visitorEmoji: visit.visitorEmoji || visit.visitor_emoji || null,
+    profileSource: visit.profileSource || visit.profile_source || null,
+    pageHistory: Array.isArray(visit.pageHistory) ? visit.pageHistory : (Array.isArray(visit.page_history) ? visit.page_history : [])
+});
+
+const toTimestampMs = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isVisitBeforeBoundary = (visitTimestamp, boundaryIso) => {
+    const boundaryMs = toTimestampMs(boundaryIso);
+    const visitMs = toTimestampMs(visitTimestamp);
+    if (!boundaryMs || !visitMs) return false;
+    return visitMs < boundaryMs;
+};
+
+const filterVisitsByTimeWindow = (visits, { clearedAt = null, from = null, to = null } = {}) => visits.filter((visit) => {
+    const ts = visit?.timestamp;
+    if (!ts) return false;
+    if (clearedAt && ts < clearedAt) return false;
+    if (from && ts < from) return false;
+    if (to && ts > to) return false;
+    return true;
+});
+
+const mergeVisits = (primaryVisits = [], secondaryVisits = []) => {
+    const merged = [];
+    const seen = new Set();
+
+    const pushVisit = (visit) => {
+        if (!visit || !visit.timestamp) return;
+        const key = visit.id
+            ? `id:${visit.id}`
+            : `ts:${visit.timestamp}|ip:${visit.ip || ''}|page:${visit.pageViewed || ''}|ua:${visit.userAgent || ''}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(visit);
+    };
+
+    primaryVisits.forEach(pushVisit);
+    secondaryVisits.forEach(pushVisit);
+    return merged;
+};
+
+const applyProfileOverrides = (visits, profileOverrides = {}) => visits.map((visit) => {
+    const override = profileOverrides?.[visit.id];
+    if (!override || typeof override !== 'object') {
+        const isBot = Boolean(visit.isBot ?? visit.isCrawler);
+        return {
+            ...visit,
+            isBot,
+            visitorKind: visit.visitorKind || (isBot ? 'bot' : 'human'),
+            visitorEmoji: visit.visitorEmoji || (isBot ? '🤖' : '🧑'),
+            pageHistory: Array.isArray(visit.pageHistory) ? visit.pageHistory : []
+        };
+    }
+
+    const isVpn = typeof override.isVpn === 'boolean' ? override.isVpn : visit.isVpn;
+    const isCrawler = typeof override.isCrawler === 'boolean' ? override.isCrawler : Boolean(visit.isCrawler);
+    const isBot = typeof override.isBot === 'boolean' ? override.isBot : (Boolean(visit.isBot) || isCrawler);
+
+    return {
+        ...visit,
+        country: override.country || visit.country,
+        city: override.city || visit.city,
+        region: override.region || visit.region,
+        latitude: Number(override.latitude ?? visit.latitude ?? 0),
+        longitude: Number(override.longitude ?? visit.longitude ?? 0),
+        isp: override.isp || visit.isp,
+        timezone: override.timezone || visit.timezone,
+        connectionType: override.connectionType || visit.connectionType,
+        pageViewed: override.pageViewed || visit.pageViewed,
+        isVpn,
+        isCrawler,
+        isBot,
+        botName: override.botName || visit.botName || null,
+        botReason: override.botReason || visit.botReason || null,
+        botConfidence: Number(override.botConfidence ?? visit.botConfidence ?? 0) || 0,
+        visitorKind: override.visitorKind || visit.visitorKind || (isBot ? 'bot' : 'human'),
+        visitorEmoji: override.visitorEmoji || visit.visitorEmoji || (isBot ? '🤖' : '🧑'),
+        profileSource: override.profileSource || visit.profileSource || null,
+        pageHistory: Array.from(new Set([
+            ...(Array.isArray(visit.pageHistory) ? visit.pageHistory : []),
+            ...(Array.isArray(override.pageHistory) ? override.pageHistory : [])
+        ])).slice(-30)
+    };
 });
 
 const getDailyKeys = (count = 7) => {
@@ -1037,7 +1362,11 @@ const visitMatchesSearch = (visit, query) => {
         visit.reelId,
         visit.timestamp,
         Number(visit.sessionDuration || 0),
-        vpnLabel
+        vpnLabel,
+        visit.visitorKind,
+        visit.botName,
+        visit.botReason,
+        visit.profileSource
     ];
 
     return fields.some((value) => String(value ?? '').toLowerCase().includes(normalized));
@@ -1648,10 +1977,15 @@ app.post('/api/logout', validateAdminToken, async (req, res) => {
 // Track Visitor
 app.post('/api/track', async (req, res) => {
     try {
-        const { userAgent, pageViewed, reelId } = req.body;
+        const { userAgent, pageViewed, reelId } = req.body || {};
         const clientIP = getClientIP(req);
-        const geoData = await fetchGeoData(clientIP);
+        const geoData = isLocalOrPrivateIp(clientIP)
+            ? await fetchGeoData(clientIP)
+            : (await getGeoDataCached(clientIP)) || await fetchGeoData(clientIP);
         const deviceType = getDeviceType(userAgent);
+        const visitorIdentity = buildVisitorIdentity({ userAgent, geoData });
+        const db = readDB();
+        const clearedAt = db.analytics?.clearedAt || null;
 
         const visitorData = {
             ip: clientIP,
@@ -1671,19 +2005,47 @@ app.post('/api/track', async (req, res) => {
             session_duration: 0
         };
 
+        const profileOverride = {
+            country: geoData.country,
+            city: geoData.city,
+            region: geoData.region,
+            latitude: geoData.latitude,
+            longitude: geoData.longitude,
+            isp: geoData.isp,
+            isVpn: geoData.isVpn,
+            connectionType: geoData.connectionType,
+            timezone: geoData.timezone,
+            isCrawler: visitorIdentity.isCrawler,
+            isBot: visitorIdentity.isBot,
+            botName: visitorIdentity.botName,
+            botReason: visitorIdentity.botReason,
+            botConfidence: visitorIdentity.botConfidence,
+            visitorKind: visitorIdentity.visitorKind,
+            visitorEmoji: visitorIdentity.visitorEmoji,
+            profileSource: geoData.source || 'fallback',
+            pageViewed: pageViewed || '/',
+            pageHistory: [pageViewed || '/']
+        };
+
         // Prevent duplicate rapid-fire visits from same IP within 60 seconds
         const now = Date.now();
         const recentWindow = 60 * 1000; // 60 seconds
 
         // Check local fallback DB first for recent visit
-        const db = readDB();
         if (!db.analytics) db.analytics = { visits: [], reelClicks: {} };
         if (!db.analytics.sessionDurations) db.analytics.sessionDurations = {};
-        const recentLocal = db.analytics.visits.find(v => v.ip === clientIP && (now - new Date(v.timestamp).getTime()) < recentWindow);
+        const recentLocal = db.analytics.visits.find((visit) => {
+            if (visit.ip !== clientIP) return false;
+            if (isVisitBeforeBoundary(visit.timestamp || visit.created_at, clearedAt)) return false;
+            return (now - new Date(visit.timestamp || visit.created_at).getTime()) < recentWindow;
+        });
         if (recentLocal) {
             // Update pageViewed if new
             recentLocal.page_viewed = pageViewed || recentLocal.page_viewed;
+            Object.assign(recentLocal, profileOverride);
             writeDB(db);
+            analyticsCache = { timestamp: 0, key: '', visits: [] };
+            persistVisitProfileOverride(recentLocal.id, profileOverride);
             return res.json({ success: true, visitId: recentLocal.id, source: 'local_recent' });
         }
 
@@ -1697,23 +2059,37 @@ app.post('/api/track', async (req, res) => {
                 .limit(1);
 
             const latestVisit = recentSupabase?.[0];
-            if (latestVisit && (now - new Date(latestVisit.created_at).getTime()) < (30 * 60 * 1000)) {
+            const latestCreatedAtMs = toTimestampMs(latestVisit?.created_at);
+            const canReuseSupabaseVisit = Boolean(
+                latestVisit
+                && latestCreatedAtMs
+                && !isVisitBeforeBoundary(latestVisit.created_at, clearedAt)
+                && (now - latestCreatedAtMs) < (30 * 60 * 1000)
+            );
+
+            if (canReuseSupabaseVisit) {
                 if (pageViewed && pageViewed !== latestVisit.page_viewed) {
                     await supabase.from('visitors').update({ page_viewed: pageViewed }).eq('id', latestVisit.id);
                 }
+                analyticsCache = { timestamp: 0, key: '', visits: [] };
+                persistVisitProfileOverride(latestVisit.id, profileOverride);
                 return res.json({ success: true, visitId: latestVisit.id, source: 'supabase_recent' });
             }
 
             const { data, error } = await supabase.from('visitors').insert([visitorData]).select().single();
             if (error || !data) throw error || new Error('No data');
+            analyticsCache = { timestamp: 0, key: '', visits: [] };
+            persistVisitProfileOverride(data.id, profileOverride);
             return res.json({ success: true, visitId: data.id, source: 'supabase' });
         } catch (err) {
             // Supabase failed or not configured — store locally but avoid duplicates
-            const localVisit = { id: Date.now().toString(), timestamp: new Date().toISOString(), ...visitorData };
+            const localVisit = { id: Date.now().toString(), timestamp: new Date().toISOString(), ...visitorData, ...profileOverride };
             db.analytics.visits.push(localVisit);
             // Keep list length limited
             if (db.analytics.visits.length > 2000) db.analytics.visits = db.analytics.visits.slice(-2000);
             writeDB(db);
+            analyticsCache = { timestamp: 0, key: '', visits: [] };
+            persistVisitProfileOverride(localVisit.id, profileOverride);
             return res.json({ success: true, visitId: localVisit.id, source: 'local' });
         }
     } catch (error) {
@@ -1723,11 +2099,54 @@ app.post('/api/track', async (req, res) => {
     }
 });
 
+app.post('/api/track/page', async (req, res) => {
+    try {
+        const visitId = sanitizeString(String(req.body?.visitId || ''), 128);
+        const pageViewed = sanitizeString(String(req.body?.pageViewed || '/'), 240) || '/';
+        if (!visitId) return res.json({ success: false });
+
+        const db = readDB();
+        ensureAnalyticsContainers(db);
+
+        const localIndex = db.analytics.visits.findIndex((visit) => String(visit.id) === visitId);
+        if (localIndex !== -1) {
+            db.analytics.visits[localIndex].page_viewed = pageViewed;
+            const currentHistory = Array.isArray(db.analytics.visits[localIndex].page_history)
+                ? db.analytics.visits[localIndex].page_history
+                : [];
+            db.analytics.visits[localIndex].page_history = Array.from(new Set([...currentHistory, pageViewed])).slice(-30);
+        }
+
+        const profile = db.analytics.profileOverrides[visitId] || {};
+        const profileHistory = Array.isArray(profile.pageHistory) ? profile.pageHistory : [];
+        db.analytics.profileOverrides[visitId] = {
+            ...profile,
+            pageViewed,
+            pageHistory: Array.from(new Set([...profileHistory, pageViewed])).slice(-30),
+            updatedAt: new Date().toISOString()
+        };
+
+        writeDB(db);
+        analyticsCache = { timestamp: 0, key: '', visits: [] };
+
+        const { error } = await supabase.from('visitors').update({ page_viewed: pageViewed }).eq('id', visitId);
+        if (error) {
+            logNotification('warning', 'Page Tracking Sync Warning', `Failed to sync page path to Supabase: ${error.message}`, null);
+        }
+
+        return res.json({ success: true });
+    } catch (error) {
+        reportServerError('Page Tracking Error', error, req);
+        return res.json({ success: false });
+    }
+});
+
 // Session Heartbeat
 app.post('/api/track/heartbeat', async (req, res) => {
     try {
         const visitId = req.body?.visitId;
         const duration = Math.max(0, Number(req.body?.duration) || 0);
+        const sessionStartedAt = req.body?.sessionStartedAt;
         if (!visitId) return res.json({ success: false });
 
         const db = readDB();
@@ -1735,6 +2154,15 @@ app.post('/api/track/heartbeat', async (req, res) => {
         if (!db.analytics.sessionDurations || typeof db.analytics.sessionDurations !== 'object') {
             db.analytics.sessionDurations = {};
         }
+
+        if (isVisitBeforeBoundary(sessionStartedAt, db.analytics?.clearedAt || null)) {
+            return res.json({
+                success: false,
+                resetVisit: true,
+                reason: 'analytics_cleared'
+            });
+        }
+
         db.analytics.sessionDurations[visitId] = duration;
 
         const { error } = await supabase.from('visitors').update({ session_duration: duration }).eq('id', visitId);
@@ -1747,6 +2175,7 @@ app.post('/api/track/heartbeat', async (req, res) => {
             logNotification('warning', 'Heartbeat Sync Warning', `Failed to sync session duration to Supabase: ${error.message}`, null);
         }
         writeDB(db);
+        analyticsCache = { timestamp: 0, key: '', visits: [] };
         res.json({ success: true });
     } catch (error) {
         reportServerError('Heartbeat Error', error, req);
@@ -1768,6 +2197,7 @@ app.post('/api/track/reel', async (req, res) => {
             await supabase.from('visitors').update({ reel_id: reelId }).eq('id', visitId);
         }
         writeDB(db);
+        analyticsCache = { timestamp: 0, key: '', visits: [] };
         res.json({ success: true });
     } catch (error) {
         reportServerError('Reel Tracking Error', error, req);
@@ -1793,24 +2223,21 @@ app.get('/api/analytics', validateAdminToken, async (req, res) => {
         const db = readDB();
         const clearedAt = db.analytics?.clearedAt || null;
         const durationOverrides = db.analytics?.sessionDurations || {};
+        const localVisits = filterVisitsByTimeWindow(
+            (db.analytics?.visits || []).map(mapLocalVisit),
+            { clearedAt, from, to }
+        );
         let allVisits = [];
 
         try {
-            allVisits = await fetchSupabaseVisits({ clearedAt, from, to });
+            const supabaseVisits = await fetchSupabaseVisits({ clearedAt, from, to });
+            allVisits = mergeVisits(supabaseVisits, localVisits);
         } catch (supabaseError) {
             console.warn('Supabase analytics fetch failed, using local fallback:', supabaseError.message);
-            allVisits = (db.analytics?.visits || []).map(mapLocalVisit);
-            if (clearedAt) {
-                allVisits = allVisits.filter((visit) => visit.timestamp && visit.timestamp >= clearedAt);
-            }
-            if (from) {
-                allVisits = allVisits.filter((visit) => visit.timestamp && visit.timestamp >= from);
-            }
-            if (to) {
-                allVisits = allVisits.filter((visit) => visit.timestamp && visit.timestamp <= to);
-            }
+            allVisits = localVisits;
         }
 
+        allVisits = applyProfileOverrides(allVisits, db.analytics?.profileOverrides || {});
         allVisits = applySessionDurationOverrides(allVisits, durationOverrides);
 
         if (ipQuery) {
@@ -1848,7 +2275,12 @@ app.get('/api/analytics', validateAdminToken, async (req, res) => {
         console.error('Analytics fetch error:', error);
         reportServerError('Analytics Fetch Error', error, req);
         const db = readDB();
-        let visits = applySessionDurationOverrides((db.analytics?.visits || []).map(mapLocalVisit), db.analytics?.sessionDurations || {});
+        const fallbackClearedAt = db.analytics?.clearedAt || null;
+        let visits = filterVisitsByTimeWindow((db.analytics?.visits || []).map(mapLocalVisit), {
+            clearedAt: fallbackClearedAt
+        });
+        visits = applyProfileOverrides(visits, db.analytics?.profileOverrides || {});
+        visits = applySessionDurationOverrides(visits, db.analytics?.sessionDurations || {});
         if (ipQuery) {
             visits = visits.filter((visit) => String(visit.ip || '').toLowerCase().includes(ipQuery));
         }
@@ -1961,8 +2393,12 @@ app.post('/api/settings/password', validateAdminToken, async (req, res) => {
     }
 });
 
-const countSupabaseVisitors = async () => {
-    const { count, error } = await supabase.from('visitors').select('id', { count: 'exact', head: true });
+const countSupabaseVisitors = async ({ from = null } = {}) => {
+    let query = supabase.from('visitors').select('id', { count: 'exact', head: true });
+    if (from) {
+        query = query.gte('created_at', from);
+    }
+    const { count, error } = await query;
     if (error) throw error;
     return Number(count || 0);
 };
@@ -1994,16 +2430,17 @@ const deleteSupabaseVisitorsInBatches = async () => {
 app.get('/api/settings/analytics-count', validateAdminToken, async (_req, res) => {
     try {
         const db = readDB();
+        const clearedAt = db.analytics?.clearedAt || null;
         let supabaseCount = 0;
         let supabaseAvailable = true;
 
         try {
-            supabaseCount = await countSupabaseVisitors();
+            supabaseCount = await countSupabaseVisitors({ from: clearedAt });
         } catch (error) {
             supabaseAvailable = false;
         }
 
-        const localCount = (db.analytics?.visits || []).length;
+        const localCount = filterVisitsByTimeWindow((db.analytics?.visits || []).map(mapLocalVisit), { clearedAt }).length;
         const total = supabaseCount + localCount;
         res.json({ success: true, total, supabaseCount, localCount, supabaseAvailable });
     } catch (error) {
@@ -2046,6 +2483,7 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
             ip_logs: [],
             reelClicks: {},
             sessionDurations: {},
+            profileOverrides: {},
             clearedAt,
             stats: {
                 total_visitors: 0,

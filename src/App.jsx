@@ -87,6 +87,20 @@ const MainContent = () => {
       .catch(err => console.error('Tracking failed', err));
   }, [location.pathname, isLoading, visitIdState]);
 
+  // Update visited page path within the active session
+  useEffect(() => {
+    if (isLoading || !visitIdState) return;
+
+    fetch('/api/track/page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitId: visitIdState,
+        pageViewed: location.pathname
+      })
+    }).catch(() => { });
+  }, [location.pathname, isLoading, visitIdState]);
+
   // Session duration heartbeat — runs when we have a visitId
   useEffect(() => {
     if (!visitIdState) return;
@@ -99,9 +113,19 @@ const MainContent = () => {
         keepalive,
         body: JSON.stringify({
           visitId: visitIdState,
-          duration
+          duration,
+          sessionStartedAt: new Date(sessionStartRef.current).toISOString()
         })
-      }).catch(() => { });
+      })
+        .then((response) => response.json().catch(() => null))
+        .then((payload) => {
+          if (payload?.resetVisit) {
+            sessionStorage.removeItem('portfolioVisitId');
+            setVisitIdState(null);
+            sessionStartRef.current = Date.now();
+          }
+        })
+        .catch(() => { });
     };
 
     const heartbeatInterval = setInterval(() => {

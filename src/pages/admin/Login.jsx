@@ -32,7 +32,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a192f] flex items-center justify-center relative overflow-hidden">
+        <div className="min-h-screen bg-[#0a192f] flex items-center justify-center relative overflow-hidden p-4 pt-[calc(env(safe-area-inset-top,0)+1rem)] pb-[calc(env(safe-area-inset-bottom,0)+1rem)]">
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
             <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px]"></div>
@@ -40,7 +40,7 @@ const Login = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative z-10"
+                className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl relative z-10"
             >
                 <h2 className="text-3xl font-display font-bold text-white mb-2 text-center">Welcome Back.</h2>
                 <p className="text-gray-400 text-center mb-8">Enter your credentials to access the command center.</p>
