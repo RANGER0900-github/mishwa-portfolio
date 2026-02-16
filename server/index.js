@@ -423,8 +423,10 @@ app.use((req, res, next) => {
     const gaConnectSources = GA_ENABLED
         ? " https://www.google-analytics.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://www.googletagmanager.com"
         : '';
+    const cloudflareScriptSources = ' https://static.cloudflareinsights.com';
+    const cloudflareConnectSources = ' https://cloudflareinsights.com https://static.cloudflareinsights.com';
     res.setHeader('Content-Security-Policy',
-        `default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net${gaConnectSources}; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'nonce-${nonce}'${gaScriptSources}; frame-ancestors 'none';`
+        `default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net${gaConnectSources}${cloudflareConnectSources}; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'nonce-${nonce}'${gaScriptSources}${cloudflareScriptSources}; frame-ancestors 'none';`
     );
     next();
 });
@@ -3317,41 +3319,10 @@ const renderAnalyticsHeadBlock = (nonce, includeAnalytics) => {
     ].join('\n');
 };
 
-const optimizeRenderBlockingStyles = (html, nonce) => {
-    if (!html || typeof html !== 'string') return html;
-    const stylesheetRegex = /<link\s+([^>]*?)rel=["']stylesheet["']([^>]*?)>/gi;
-    const noscriptLinks = [];
-
-    const transformed = html.replace(stylesheetRegex, (fullTag) => {
-        const hrefMatch = fullTag.match(/href=["']([^"']+)["']/i);
-        if (!hrefMatch?.[1]) return fullTag;
-        const href = hrefMatch[1];
-        const hasCrossorigin = /\bcrossorigin\b/i.test(fullTag);
-        const crossoriginAttr = hasCrossorigin ? ' crossorigin' : '';
-
-        noscriptLinks.push(`<link rel="stylesheet" href="${escapeHtml(href)}"${crossoriginAttr} />`);
-
-        return `<link rel="preload" as="style" href="${escapeHtml(href)}"${crossoriginAttr} /><link rel="stylesheet" href="${escapeHtml(href)}"${crossoriginAttr} media="print" data-async-css="true" />`;
-    });
-
-    if (noscriptLinks.length === 0) return html;
-    const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
-    const loaderScript = [
-        `<script${safeNonce}>`,
-        "(function(){",
-        "var links=document.querySelectorAll('link[data-async-css=\"true\"]');",
-        "for(var i=0;i<links.length;i++){",
-        "var link=links[i];",
-        "var apply=function(target){target.media='all';target.removeAttribute('data-async-css');};",
-        "link.addEventListener('load', function(event){apply(event.currentTarget);}, { once:true });",
-        "setTimeout((function(target){return function(){apply(target);};})(link), 3000);",
-        "}",
-        "})();",
-        '</script>',
-        `<noscript>${noscriptLinks.join('')}</noscript>`
-    ].join('');
-
-    return transformed.replace('</head>', `${loaderScript}\n</head>`);
+const optimizeRenderBlockingStyles = (html, _nonce) => {
+    // Keep stylesheet links blocking by default. Cloudflare Rocket Loader can
+    // interfere with async CSS-loader scripts and leave pages unstyled.
+    return html;
 };
 
 const injectRootFallbackContent = (html, markup) => {
@@ -3363,6 +3334,15 @@ const injectRootFallbackContent = (html, markup) => {
 const stripClientEntrypointScript = (html) => {
     if (!html || typeof html !== 'string') return html;
     return html.replace(/<script[^>]+type=["']module["'][^>]*><\/script>/gi, '');
+};
+
+const markScriptsAsCloudflareSafe = (html) => {
+    if (!html || typeof html !== 'string') return html;
+    return html.replace(/<script\b([^>]*)>/gi, (fullTag, attrs = '') => {
+        if (/\bdata-cfasync\s*=/i.test(attrs)) return fullTag;
+        if (/src=["'][^"']*\/cdn-cgi\//i.test(attrs)) return fullTag;
+        return `<script data-cfasync="false"${attrs}>`;
+    });
 };
 
 const renderSeoMetaBlock = (seo, nonce, { includeAnalytics = false } = {}) => {
@@ -3453,6 +3433,7 @@ app.get(/.*/, (req, res) => {
     }
 
     html = optimizeRenderBlockingStyles(html, nonce);
+    html = markScriptsAsCloudflareSafe(html);
 
     if (useBotFastPath && req.path === '/') {
         html = stripClientEntrypointScript(html);
