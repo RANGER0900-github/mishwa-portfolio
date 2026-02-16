@@ -166,6 +166,36 @@ const normalizePublicSiteUrl = (value) => {
     return withProto.replace(/\/+$/, '');
 };
 
+const getRequestBaseUrl = (req) => {
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+    const proto = forwardedProto || req.protocol || 'http';
+    const host = forwardedHost || req.get('host') || '';
+    return normalizePublicSiteUrl(`${proto}://${host}`);
+};
+
+const getPreferredPublicBaseUrl = (req) => {
+    const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
+    const requestBase = getRequestBaseUrl(req);
+
+    if (!configuredBase) return requestBase;
+    if (!requestBase) return configuredBase;
+
+    try {
+        const configuredHost = new URL(configuredBase).host.toLowerCase();
+        const requestHost = new URL(requestBase).host.toLowerCase();
+        const strictConfigured = String(process.env.PUBLIC_SITE_URL_STRICT || '').toLowerCase() === 'true';
+
+        if (!strictConfigured && configuredHost !== requestHost) {
+            return requestBase;
+        }
+    } catch {
+        return configuredBase;
+    }
+
+    return configuredBase;
+};
+
 const SEO_OWNER_NAME = sanitizeString(process.env.SEO_OWNER_NAME || 'Mishwa Zalavadiya', 120);
 const SEO_BRAND_NAME = sanitizeString(process.env.SEO_BRAND_NAME || 'Mishwa', 80);
 const SEO_SITE_NAME = sanitizeString(process.env.SEO_SITE_NAME || `${SEO_BRAND_NAME} Portfolio`, 140);
@@ -1842,8 +1872,7 @@ app.get('/api/content', (req, res) => {
 app.get('/sitemap.xml', (req, res) => {
     try {
         const db = readDB();
-        const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
-        const baseUrl = configuredBase || normalizePublicSiteUrl(`${req.protocol}://${req.get('host')}`);
+        const baseUrl = getPreferredPublicBaseUrl(req);
         const lastmod = String(db.contentHistory?.[0]?.timestamp || new Date().toISOString()).split('T')[0];
 
         const staticRoutes = [
@@ -1889,8 +1918,7 @@ ${xmlBody}
 
 // Robots.txt for SEO
 app.get('/robots.txt', (req, res) => {
-    const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
-    const baseUrl = configuredBase || normalizePublicSiteUrl(`${req.protocol}://${req.get('host')}`);
+    const baseUrl = getPreferredPublicBaseUrl(req);
     const aiBotDirectives = SEO_AI_BOT_ALLOWLIST.map((bot) => `User-agent: ${bot}
 Allow: /
 Disallow: /admin/
@@ -2893,11 +2921,7 @@ app.use((error, req, res, _next) => {
 });
 
 const getPublicSiteUrlForRequest = (req) => {
-    const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
-    if (configuredBase) return configuredBase;
-    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
-    const proto = forwardedProto || req.protocol || 'http';
-    return normalizePublicSiteUrl(`${proto}://${req.get('host')}`);
+    return getPreferredPublicBaseUrl(req);
 };
 
 const resolveAbsoluteUrl = (baseUrl, url) => {
