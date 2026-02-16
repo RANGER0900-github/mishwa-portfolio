@@ -52,19 +52,27 @@ const AdminLayout = () => {
     }, [location.pathname]);
 
     useEffect(() => {
-        if (!window.lenis) return undefined;
-        if (isMobileMenuOpen) {
-            window.lenis.stop();
+        if (window.lenis) {
+            if (isMobileMenuOpen) {
+                window.lenis.stop();
+            } else {
+                window.lenis.start();
+            }
         } else {
-            window.lenis.start();
+            document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
         }
 
         return () => {
             if (window.lenis) {
                 window.lenis.start();
             }
+            document.body.style.overflow = '';
         };
     }, [isMobileMenuOpen]);
+
+    useEffect(() => () => {
+        document.body.style.overflow = '';
+    }, []);
 
     const handleLogout = async () => {
         try {

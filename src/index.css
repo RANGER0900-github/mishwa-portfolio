@@ -51,6 +51,13 @@ html.lenis body {
   overscroll-behavior: contain;
 }
 
+[data-lenis-prevent],
+[data-lenis-prevent-wheel],
+[data-lenis-prevent-touch] {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .lenis.lenis-stopped {
   overflow: hidden;
 }

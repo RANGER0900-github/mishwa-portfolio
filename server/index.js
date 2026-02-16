@@ -128,11 +128,105 @@ const ensureProjectSlugs = (content) => {
     return { content, changed };
 };
 
+const buildProjectSeoDescription = (project = {}) => {
+    const title = sanitizeString(project.title || 'Project', 120);
+    const category = sanitizeString(project.category || 'Video Editing', 80);
+    return sanitizeString(
+        `${title} is a ${category.toLowerCase()} project from ${SEO_OWNER_NAME}, a ${SEO_LOCATION}-based video editor focused on high-retention reels and cinematic storytelling.`,
+        180
+    );
+};
+
+const ensureProjectSeoFields = (content) => {
+    if (!content?.projects || !Array.isArray(content.projects)) return { content, changed: false };
+    let changed = false;
+
+    content.projects = content.projects.map((project) => {
+        if (!project || typeof project !== 'object') return project;
+        const currentDescription = sanitizeString(project.seoDescription || '', 180);
+        if (currentDescription) {
+            if (project.seoDescription !== currentDescription) {
+                changed = true;
+                return { ...project, seoDescription: currentDescription };
+            }
+            return project;
+        }
+
+        changed = true;
+        return { ...project, seoDescription: buildProjectSeoDescription(project) };
+    });
+
+    return { content, changed };
+};
+
 const normalizePublicSiteUrl = (value) => {
     const raw = sanitizeString(String(value || ''), 300);
     if (!raw) return '';
     const withProto = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
     return withProto.replace(/\/+$/, '');
+};
+
+const SEO_OWNER_NAME = sanitizeString(process.env.SEO_OWNER_NAME || 'Mishwa Zalavadiya', 120);
+const SEO_BRAND_NAME = sanitizeString(process.env.SEO_BRAND_NAME || 'Mishwa', 80);
+const SEO_SITE_NAME = sanitizeString(process.env.SEO_SITE_NAME || `${SEO_BRAND_NAME} Portfolio`, 140);
+const SEO_LOCATION = sanitizeString(process.env.SEO_LOCATION || 'Surat, Gujarat, India', 140);
+const SEO_DEFAULT_INSTAGRAM_URL = sanitizeString(process.env.SEO_INSTAGRAM_URL || 'https://www.instagram.com/_thecoco_club/', 260);
+const SEO_DEFAULT_IMAGE_PATH = sanitizeString(process.env.SEO_DEFAULT_IMAGE || '/my-logo-circle.png', 260) || '/my-logo-circle.png';
+const SEO_DEFAULT_KEYWORDS = [
+    'Mishwa Zalavadiya video editor portfolio',
+    'Mishwa Zalavadiya portfolio',
+    'Mishwa portfolio',
+    'Mishwa Surat portfolio',
+    'Mishwa video editor portfolio',
+    'Surat video editor portfolio',
+    'best video editor portfolio',
+    'Instagram Reels editor',
+    'high retention reels editor',
+    'cinematic storytelling editor',
+    'freelance video editor India'
+];
+const SEO_LANDING_PAGES = Object.freeze({
+    '/mishwa-zalavadiya-video-editor-portfolio': {
+        title: `${SEO_OWNER_NAME} Video Editor Portfolio | ${SEO_LOCATION}`,
+        description: `${SEO_OWNER_NAME} is a ${SEO_LOCATION}-based video editor specializing in high-retention Instagram Reels, ad creatives, and cinematic storytelling edits.`,
+        keywords: [
+            'mishwa zalavadiya video editor portfolio',
+            'mishwa zalavadiya reels editor',
+            'surat video editor portfolio',
+            'instagram reels editor surat'
+        ]
+    },
+    '/mishwa-zalavadiya-portfolio': {
+        title: `${SEO_OWNER_NAME} Portfolio | Video Editor & Visual Artist`,
+        description: `Explore the official ${SEO_OWNER_NAME} portfolio with reel archives, cinematic edits, and featured client projects.`,
+        keywords: [
+            'mishwa zalavadiya portfolio',
+            'mishwa portfolio website',
+            'video editor portfolio india',
+            'creative editor portfolio'
+        ]
+    },
+    '/surat-video-editor-portfolio': {
+        title: `Surat Video Editor Portfolio | ${SEO_OWNER_NAME}`,
+        description: `${SEO_OWNER_NAME} builds scroll-stopping content for brands in Surat and beyond with premium reel editing and social-first storytelling.`,
+        keywords: [
+            'surat video editor',
+            'surat reel editor',
+            'video editor gujarat',
+            'instagram video editor surat'
+        ]
+    }
+});
+const SEO_AI_BOT_ALLOWLIST = ['GPTBot', 'OAI-SearchBot', 'Google-Extended', 'ClaudeBot', 'PerplexityBot', 'CCBot'];
+
+const parseTwitterHandle = (value) => {
+    const raw = sanitizeString(String(value || ''), 200);
+    if (!raw) return '';
+    if (raw.startsWith('@')) return raw;
+    const trimmed = raw.replace(/\/+$/, '');
+    const match = trimmed.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]{1,15})$/i);
+    if (match?.[1]) return `@${match[1]}`;
+    return '';
 };
 
 // Storage configuration (Redis + in-memory fallback)
@@ -815,6 +909,8 @@ if (HAS_DIST) {
             // Cache hashed build assets aggressively; keep everything else short-lived.
             if (filePath.includes(`${path.sep}assets${path.sep}`)) {
                 res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            } else if (filePath.includes(`${path.sep}favicons${path.sep}`) || filePath.endsWith('site.webmanifest') || filePath.endsWith('my-logo-circle.png')) {
+                res.setHeader('Cache-Control', 'public, max-age=2592000, stale-while-revalidate=604800');
             } else {
                 res.setHeader('Cache-Control', 'public, max-age=300');
             }
@@ -858,7 +954,12 @@ const initializeDB = () => {
     if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
     if (!db.content || typeof db.content !== 'object') db.content = {};
     const slugResult = ensureProjectSlugs(db.content);
-    db.content = slugResult.content;
+    const seoResult = ensureProjectSeoFields(slugResult.content);
+    db.content = seoResult.content;
+    if (!db.content.social || typeof db.content.social !== 'object') db.content.social = {};
+    if (!sanitizeString(db.content.social.instagram || '', 260)) {
+        db.content.social.instagram = SEO_DEFAULT_INSTAGRAM_URL;
+    }
     if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
     if (!db.security.blockedIps || typeof db.security.blockedIps !== 'object') db.security.blockedIps = {};
     if (!Array.isArray(db.security.appeals)) db.security.appeals = [];
@@ -1744,39 +1845,39 @@ app.get('/sitemap.xml', (req, res) => {
         const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
         const baseUrl = configuredBase || normalizePublicSiteUrl(`${req.protocol}://${req.get('host')}`);
         const lastmod = String(db.contentHistory?.[0]?.timestamp || new Date().toISOString()).split('T')[0];
-        
-        let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${baseUrl}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/reels</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-`;
 
-        // Add all projects to sitemap
-        if (db.content?.projects && Array.isArray(db.content.projects)) {
-            db.content.projects.forEach(project => {
+        const staticRoutes = [
+            { path: '/', changefreq: 'weekly', priority: '1.0' },
+            { path: '/reels', changefreq: 'weekly', priority: '0.9' },
+            ...Object.keys(SEO_LANDING_PAGES).map((pathName) => ({ path: pathName, changefreq: 'weekly', priority: '0.8' }))
+        ];
+
+        const projectRoutes = [];
+        const seenProjectSlugs = new Set();
+        if (Array.isArray(db.content?.projects)) {
+            for (const project of db.content.projects) {
                 const slug = project?.slug && isValidSlug(project.slug) ? project.slug : slugify(project?.title || project?.id || '');
-                if (!slug) return;
-                xml += `  <url>
-    <loc>${baseUrl}/project/${slug}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-`;
-            });
+                if (!slug || seenProjectSlugs.has(slug)) continue;
+                seenProjectSlugs.add(slug);
+                projectRoutes.push({ path: `/project/${slug}`, changefreq: 'monthly', priority: '0.7' });
+            }
         }
 
-        xml += `</urlset>`;
+        const allRoutes = [...staticRoutes, ...projectRoutes];
+        const xmlBody = allRoutes.map((route) => {
+            const loc = route.path === '/' ? baseUrl : `${baseUrl}${route.path}`;
+            return `  <url>
+    <loc>${escapeHtml(loc)}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>${route.changefreq}</changefreq>
+    <priority>${route.priority}</priority>
+  </url>`;
+        }).join('\n');
+
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${xmlBody}
+</urlset>`;
 
         res.setHeader('Content-Type', 'application/xml');
         res.send(xml);
@@ -1790,12 +1891,21 @@ app.get('/sitemap.xml', (req, res) => {
 app.get('/robots.txt', (req, res) => {
     const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
     const baseUrl = configuredBase || normalizePublicSiteUrl(`${req.protocol}://${req.get('host')}`);
+    const aiBotDirectives = SEO_AI_BOT_ALLOWLIST.map((bot) => `User-agent: ${bot}
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+`).join('\n');
+
     const robotsTxt = `User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
 
+${aiBotDirectives}
+Host: ${baseUrl}
 Sitemap: ${baseUrl}/sitemap.xml
+# AI context: ${baseUrl}/llms.txt
 `;
     res.setHeader('Content-Type', 'text/plain');
     res.send(robotsTxt);
@@ -1822,6 +1932,11 @@ app.post('/api/content', validateAdminToken, (req, res) => {
                 // Sanitize strings
                 project.title = sanitizeString(project.title, 200);
                 project.category = sanitizeString(project.category, 100);
+                project.slug = sanitizeString(project.slug || '', 120);
+                project.seoDescription = sanitizeString(
+                    project.seoDescription || buildProjectSeoDescription(project),
+                    180
+                );
                 if (project.link && !validateUrl(project.link)) {
                     return res.status(400).json({ error: 'Invalid project link URL' });
                 }
@@ -1861,7 +1976,8 @@ app.post('/api/content', validateAdminToken, (req, res) => {
         }
 
         const slugResult = ensureProjectSlugs(content);
-        db.content = { ...db.content, ...slugResult.content };
+        const seoResult = ensureProjectSeoFields(slugResult.content);
+        db.content = { ...db.content, ...seoResult.content };
         writeDB(db);
         logNotification('info', 'Content Updated', `Website content was modified via CMS from ${ip}`, ip);
         res.json({ success: true, content: db.content });
@@ -1914,7 +2030,12 @@ app.post('/api/content/history/:id/rollback', validateAdminToken, (req, res) => 
 
         const restored = JSON.parse(JSON.stringify(target.content));
         const slugResult = ensureProjectSlugs(restored);
-        db.content = slugResult.content;
+        const seoResult = ensureProjectSeoFields(slugResult.content);
+        db.content = seoResult.content;
+        if (!db.content.social || typeof db.content.social !== 'object') db.content.social = {};
+        if (!sanitizeString(db.content.social.instagram || '', 260)) {
+            db.content.social.instagram = SEO_DEFAULT_INSTAGRAM_URL;
+        }
         writeDB(db);
         logNotification('warning', 'Content Rolled Back', `Content reverted to snapshot ${req.params.id}`, getClientIP(req));
         res.json({ success: true, content: db.content });
@@ -2792,94 +2913,176 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     const safeBase = baseUrl || '';
     const normalizedPath = pathName && pathName !== '/' ? String(pathName).replace(/\/+$/, '') : '/';
     const canonical = normalizedPath === '/' ? safeBase : `${safeBase}${normalizedPath}`;
-    const ogFallbackImage = `${safeBase}/images/mishwa_portrait.png`;
+    const ogFallbackImage = resolveAbsoluteUrl(safeBase, SEO_DEFAULT_IMAGE_PATH) || `${safeBase}/images/mishwa_portrait.png`;
 
-    const name = 'Mishwa';
-    const siteName = 'Mishwa Portfolio';
+    const name = SEO_BRAND_NAME || 'Mishwa';
+    const ownerName = SEO_OWNER_NAME || name;
+    const siteName = SEO_SITE_NAME || `${name} Portfolio`;
     const jobTitle = 'Video Editor & Visual Artist';
-    const location = 'Surat, Gujarat, India';
+    const location = SEO_LOCATION || 'Surat, Gujarat, India';
     const socials = content?.social || {};
-    const sameAs = [socials.instagram, socials.youtube, socials.twitter].filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim());
+    const sameAs = Array.from(new Set([
+        SEO_DEFAULT_INSTAGRAM_URL,
+        socials.instagram,
+        socials.youtube,
+        socials.twitter
+    ].filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim())));
+    const twitterSite = parseTwitterHandle(process.env.SEO_TWITTER_HANDLE || socials.twitter);
+
+    const dedupeKeywords = (...groups) => {
+        const entries = groups.flatMap((group) => {
+            if (!group) return [];
+            return Array.isArray(group) ? group : [group];
+        });
+        const seen = new Set();
+        const deduped = [];
+        for (const keyword of entries) {
+            const value = sanitizeString(String(keyword || ''), 120);
+            if (!value) continue;
+            const lowered = value.toLowerCase();
+            if (seen.has(lowered)) continue;
+            seen.add(lowered);
+            deduped.push(value);
+        }
+        return deduped;
+    };
+
+    const buildSeoPayload = ({
+        statusCode = 200,
+        title,
+        description,
+        robots = 'index,follow',
+        keywords = [],
+        ogType = 'website',
+        image = ogFallbackImage,
+        imageAlt = `${ownerName} portfolio logo`,
+        jsonLd = [],
+        canonicalUrl = canonical
+    }) => {
+        const resolvedImage = resolveAbsoluteUrl(safeBase, image) || ogFallbackImage;
+        const mergedKeywords = dedupeKeywords(SEO_DEFAULT_KEYWORDS, keywords);
+        return {
+            statusCode,
+            title,
+            description,
+            canonical: canonicalUrl,
+            robots,
+            keywords: mergedKeywords,
+            og: {
+                type: ogType,
+                site_name: siteName,
+                locale: 'en_IN',
+                url: canonicalUrl,
+                title,
+                description,
+                image: resolvedImage,
+                imageAlt,
+                imageType: resolvedImage.endsWith('.png') ? 'image/png' : ''
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title,
+                description,
+                image: resolvedImage,
+                imageAlt,
+                site: twitterSite || ''
+            },
+            geo: {
+                placename: location,
+                position: '21.1702;72.8311',
+                region: 'IN-GJ'
+            },
+            jsonLd
+        };
+    };
 
     const baseJsonLd = [
         {
             '@context': 'https://schema.org',
             '@type': 'Person',
-            name,
-            url: safeBase,
+            '@id': `${safeBase}#person`,
+            name: ownerName,
+            alternateName: name,
+            url: safeBase || undefined,
             jobTitle,
-            description: `${name} is a ${location}-based video editor & visual artist specializing in high-retention Instagram Reels and cinematic storytelling.`,
+            image: ogFallbackImage,
+            description: `${ownerName} is a ${location}-based video editor & visual artist specializing in high-retention Instagram Reels and cinematic storytelling.`,
             homeLocation: { '@type': 'Place', name: location },
             sameAs
         },
         {
             '@context': 'https://schema.org',
             '@type': 'WebSite',
+            '@id': `${safeBase}#website`,
             name: siteName,
-            url: safeBase
+            url: safeBase || undefined,
+            inLanguage: 'en-IN'
         }
     ];
 
     if (normalizedPath.startsWith('/admin')) {
-        return {
+        return buildSeoPayload({
             statusCode: 200,
             title: `Admin | ${name}`,
             description: 'Admin panel (private).',
-            canonical,
             robots: 'noindex,nofollow',
-            og: {
-                type: 'website',
-                site_name: siteName,
-                url: canonical,
-                title: `Admin | ${name}`,
-                description: 'Admin panel (private).',
-                image: ogFallbackImage
-            },
-            twitter: {
-                card: 'summary_large_image',
-                title: `Admin | ${name}`,
-                description: 'Admin panel (private).',
-                image: ogFallbackImage
-            },
+            keywords: ['admin panel', `${name} admin`],
             jsonLd: baseJsonLd
-        };
+        });
     }
 
-    if (normalizedPath === '/reels') {
-        const title = `Archives | ${name} Video Editor Portfolio`;
-        const description = `${name}'s reel archives: high-retention Instagram Reels, edits by category, and cinematic storytelling work.`;
-        return {
-            statusCode: 200,
-            title,
-            description,
-            canonical,
-            robots: 'index,follow',
-            og: {
-                type: 'website',
-                site_name: siteName,
-                url: canonical,
-                title,
-                description,
-                image: ogFallbackImage
-            },
-            twitter: {
-                card: 'summary_large_image',
-                title,
-                description,
-                image: ogFallbackImage
-            },
+    const landingPage = SEO_LANDING_PAGES[normalizedPath];
+    if (landingPage) {
+        return buildSeoPayload({
+            title: landingPage.title,
+            description: landingPage.description,
+            keywords: landingPage.keywords,
             jsonLd: [
                 ...baseJsonLd,
                 {
                     '@context': 'https://schema.org',
-                    '@type': 'WebPage',
+                    '@type': 'ProfilePage',
+                    name: landingPage.title,
+                    description: landingPage.description,
+                    url: canonical,
+                    isPartOf: { '@id': `${safeBase}#website` },
+                    mainEntity: { '@id': `${safeBase}#person` }
+                }
+            ]
+        });
+    }
+
+    if (normalizedPath === '/reels') {
+        const title = `Archives | ${ownerName} Video Editor Portfolio`;
+        const description = `${ownerName}'s reel archives: high-retention Instagram Reels, edits by category, and cinematic storytelling work.`;
+        const projects = Array.isArray(content?.projects) ? content.projects : [];
+        const topItems = projects.slice(0, 10).map((project, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: sanitizeString(project?.title || `Project ${index + 1}`, 120),
+            url: `${safeBase}/project/${encodeURIComponent(String(project?.slug || project?.id || `project-${index + 1}`))}`
+        }));
+
+        return buildSeoPayload({
+            title,
+            description,
+            keywords: ['mishwa reels archive', 'instagram reels portfolio', 'video editing projects', 'short form editor'],
+            jsonLd: [
+                ...baseJsonLd,
+                {
+                    '@context': 'https://schema.org',
+                    '@type': 'CollectionPage',
                     name: title,
                     url: canonical,
                     description,
-                    isPartOf: { '@type': 'WebSite', name: siteName, url: safeBase }
+                    isPartOf: { '@id': `${safeBase}#website` },
+                    hasPart: topItems.length > 0 ? {
+                        '@type': 'ItemList',
+                        itemListElement: topItems
+                    } : undefined
                 }
             ]
-        };
+        });
     }
 
     const projectMatch = normalizedPath.match(/^\/project\/([^/]+)$/);
@@ -2891,126 +3094,77 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
         if (!project) {
             const title = `Project Not Found | ${name} Portfolio`;
             const description = `The requested project was not found. Browse ${name}'s reels and portfolio work.`;
-            return {
+            return buildSeoPayload({
                 statusCode: 404,
                 title,
                 description,
-                canonical,
                 robots: 'noindex,nofollow',
-                og: {
-                    type: 'website',
-                    site_name: siteName,
-                    url: canonical,
-                    title,
-                    description,
-                    image: ogFallbackImage
-                },
-                twitter: {
-                    card: 'summary_large_image',
-                    title,
-                    description,
-                    image: ogFallbackImage
-                },
+                keywords: ['project not found', `${name} reels`],
                 jsonLd: baseJsonLd
-            };
+            });
         }
 
         const projTitle = sanitizeString(project.title || 'Project', 120);
         const category = sanitizeString(project.category || '', 80);
-        const title = `${projTitle}${category ? ` (${category})` : ''} | ${name} Video Editor`;
+        const title = `${projTitle}${category ? ` (${category})` : ''} | ${ownerName} Video Editor`;
         const description = sanitizeString(
             project.seoDescription ||
-            `Watch "${projTitle}" ${category ? `(${category}) ` : ''}edited by ${name}, a ${location}-based video editor specializing in high-retention Reels and cinematic storytelling.`,
+            `Watch "${projTitle}" ${category ? `(${category}) ` : ''}edited by ${ownerName}, a ${location}-based video editor specializing in high-retention Reels and cinematic storytelling.`,
             180
         );
         const image = resolveAbsoluteUrl(safeBase, project.image) || ogFallbackImage;
         const url = canonical;
 
-        return {
-            statusCode: 200,
+        return buildSeoPayload({
             title,
             description,
-            canonical: url,
-            robots: 'index,follow',
-            og: {
-                type: 'article',
-                site_name: siteName,
-                url,
-                title,
-                description,
-                image
-            },
-            twitter: {
-                card: 'summary_large_image',
-                title,
-                description,
-                image
-            },
+            canonicalUrl: url,
+            ogType: 'article',
+            image,
+            imageAlt: `${projTitle} by ${ownerName}`,
+            keywords: [projTitle, category, `${ownerName} portfolio`, 'video editor reel', 'cinematic reel edit'],
             jsonLd: [
                 ...baseJsonLd,
                 {
                     '@context': 'https://schema.org',
                     '@type': 'CreativeWork',
+                    '@id': `${url}#creativework`,
                     name: projTitle,
                     description,
                     url,
                     image,
                     genre: category || undefined,
-                    creator: { '@type': 'Person', name, url: safeBase }
+                    creator: { '@id': `${safeBase}#person` }
                 }
             ]
-        };
+        });
     }
 
     if (normalizedPath !== '/') {
         const title = `Page Not Found | ${name} Portfolio`;
         const description = `The requested page was not found. Visit ${name}'s portfolio home or reel archives.`;
-        return {
+        return buildSeoPayload({
             statusCode: 404,
             title,
             description,
-            canonical,
             robots: 'noindex,nofollow',
-            og: {
-                type: 'website',
-                site_name: siteName,
-                url: canonical,
-                title,
-                description,
-                image: ogFallbackImage
-            },
-            twitter: {
-                card: 'summary_large_image',
-                title,
-                description,
-                image: ogFallbackImage
-            },
+            keywords: ['page not found', `${name} portfolio`],
             jsonLd: baseJsonLd
-        };
+        });
     }
 
-    const title = `${name} | Surat Video Editor Portfolio`;
-    const description = `${name} is a Surat-based video editor & visual artist. Explore high-retention Instagram Reels, cinematic edits, and portfolio work.`;
-    return {
-        statusCode: 200,
+    const title = `${ownerName} | Surat Video Editor Portfolio`;
+    const description = `${ownerName} is a Surat-based video editor & visual artist. Explore high-retention Instagram Reels, cinematic edits, and portfolio work.`;
+    return buildSeoPayload({
         title,
         description,
-        canonical,
-        robots: 'index,follow',
-        og: {
-            type: 'website',
-            site_name: siteName,
-            url: canonical,
-            title,
-            description,
-            image: ogFallbackImage
-        },
-        twitter: {
-            card: 'summary_large_image',
-            title,
-            description,
-            image: ogFallbackImage
-        },
+        keywords: [
+            'mishwa zalavadiya portfolio',
+            'mishwa video editor portfolio',
+            'surat video editor portfolio',
+            'high retention reel editor',
+            'cinematic storytelling editor'
+        ],
         jsonLd: [
             ...baseJsonLd,
             {
@@ -3019,40 +3173,54 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
                 name: title,
                 url: canonical,
                 description,
-                isPartOf: { '@type': 'WebSite', name: siteName, url: safeBase }
+                isPartOf: { '@id': `${safeBase}#website` },
+                about: { '@id': `${safeBase}#person` }
             }
         ]
-    };
+    });
 };
 
 const renderSeoMetaBlock = (seo, nonce) => {
-    const keywords = 'Mishwa portfolio, Mishwa Surat, video editor portfolio, Surat video editor, Instagram Reels editor, reels portfolio, cinematic editor';
+    const keywords = Array.isArray(seo.keywords) && seo.keywords.length > 0
+        ? seo.keywords.join(', ')
+        : SEO_DEFAULT_KEYWORDS.join(', ');
     const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
     const jsonLd = Array.isArray(seo.jsonLd) && seo.jsonLd.length > 0 ? JSON.stringify(seo.jsonLd) : '';
-
-    return [
+    const tags = [
         '<!--__SEO_START__-->',
         `<title>${escapeHtml(seo.title || '')}</title>`,
         `<meta name="description" content="${escapeHtml(seo.description || '')}" />`,
         `<meta name="keywords" content="${escapeHtml(keywords)}" />`,
-        '<meta name="author" content="Mishwa" />',
+        `<meta name="author" content="${escapeHtml(SEO_OWNER_NAME)}" />`,
+        '<meta name="generator" content="Mishwa Portfolio Site" />',
         `<meta name="robots" content="${escapeHtml(seo.robots || 'index,follow')}" />`,
         `<link rel="canonical" href="${escapeHtml(seo.canonical || '')}" />`,
+        '<meta name="geo.placename" content="' + escapeHtml(seo.geo?.placename || SEO_LOCATION) + '" />',
+        '<meta name="geo.region" content="' + escapeHtml(seo.geo?.region || 'IN-GJ') + '" />',
+        '<meta name="geo.position" content="' + escapeHtml(seo.geo?.position || '21.1702;72.8311') + '" />',
         '',
         '<meta property="og:type" content="' + escapeHtml(seo.og?.type || 'website') + '" />',
-        '<meta property="og:site_name" content="' + escapeHtml(seo.og?.site_name || 'Mishwa Portfolio') + '" />',
+        '<meta property="og:site_name" content="' + escapeHtml(seo.og?.site_name || SEO_SITE_NAME) + '" />',
+        '<meta property="og:locale" content="' + escapeHtml(seo.og?.locale || 'en_IN') + '" />',
         '<meta property="og:url" content="' + escapeHtml(seo.og?.url || seo.canonical || '') + '" />',
         '<meta property="og:title" content="' + escapeHtml(seo.og?.title || seo.title || '') + '" />',
         '<meta property="og:description" content="' + escapeHtml(seo.og?.description || seo.description || '') + '" />',
         '<meta property="og:image" content="' + escapeHtml(seo.og?.image || '') + '" />',
+        '<meta property="og:image:secure_url" content="' + escapeHtml(seo.og?.image || '') + '" />',
+        '<meta property="og:image:alt" content="' + escapeHtml(seo.og?.imageAlt || `${SEO_OWNER_NAME} portfolio logo`) + '" />',
+        seo.og?.imageType ? `<meta property="og:image:type" content="${escapeHtml(seo.og.imageType)}" />` : '',
         '',
         '<meta name="twitter:card" content="' + escapeHtml(seo.twitter?.card || 'summary_large_image') + '" />',
+        seo.twitter?.site ? `<meta name="twitter:site" content="${escapeHtml(seo.twitter.site)}" />` : '',
         '<meta name="twitter:title" content="' + escapeHtml(seo.twitter?.title || seo.title || '') + '" />',
         '<meta name="twitter:description" content="' + escapeHtml(seo.twitter?.description || seo.description || '') + '" />',
         '<meta name="twitter:image" content="' + escapeHtml(seo.twitter?.image || '') + '" />',
+        '<meta name="twitter:image:alt" content="' + escapeHtml(seo.twitter?.imageAlt || `${SEO_OWNER_NAME} portfolio logo`) + '" />',
         jsonLd ? `<script type="application/ld+json"${safeNonce}>${jsonLd}</script>` : '',
         '<!--__SEO_END__-->'
-    ].filter(Boolean).join('\n');
+    ];
+
+    return tags.filter(Boolean).join('\n');
 };
 
 const injectSeoIntoHtml = (html, seoBlock) => {

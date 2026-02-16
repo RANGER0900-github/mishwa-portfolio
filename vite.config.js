@@ -12,7 +12,7 @@ export default defineConfig({
           if (!id.includes('node_modules')) return;
           if (id.includes('react-simple-maps') || id.includes('d3-')) return 'maps';
           if (id.includes('recharts')) return 'charts';
-          if (id.includes('framer-motion') || id.includes('@studio-freight/lenis')) return 'motion';
+          if (id.includes('framer-motion') || id.includes('/lenis/') || id.includes('\\lenis\\')) return 'motion';
           if (id.includes('lucide-react') || id.includes('react-icons')) return 'icons';
           if (id.includes('@supabase/supabase-js') || id.includes('redis')) return 'backend-clients';
           return 'vendor';

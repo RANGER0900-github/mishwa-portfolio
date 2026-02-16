@@ -55,11 +55,17 @@ const main = async () => {
   const urls = [
     `${base}/`,
     `${base}/reels`,
+    `${base}/mishwa-zalavadiya-video-editor-portfolio`,
+    `${base}/mishwa-zalavadiya-portfolio`,
+    `${base}/surat-video-editor-portfolio`,
     slug ? `${base}/project/${encodeURIComponent(slug)}` : null,
     `${base}/admin/login`,
     `${base}/does-not-exist`,
     `${base}/robots.txt`,
-    `${base}/sitemap.xml`
+    `${base}/sitemap.xml`,
+    `${base}/llms.txt`,
+    `${base}/favicons/favicon-32x32.png`,
+    `${base}/favicon.ico`
   ].filter(Boolean);
 
   for (const url of urls) {
@@ -81,6 +87,8 @@ const main = async () => {
       console.log('robots:', robots, 'x-robots-tag:', res.headers.get('x-robots-tag') || '');
       console.log('desc:', desc.slice(0, 140));
       console.log('jsonld:', hasJsonLd);
+    } else if (ct.startsWith('image/')) {
+      console.log(`[binary] ${ct} bytes=${Buffer.byteLength(text)}`);
     } else {
       console.log(text.split('\n').slice(0, 12).join('\n'));
     }

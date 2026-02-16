@@ -1,16 +1,16 @@
-import { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Lenis from '@studio-freight/lenis';
+import { AnimatePresence } from 'framer-motion';
 import { LoadingProvider, useLoading } from './context/LoadingContext';
 import { ContentProvider } from './context/ContentContext';
 import { DeviceProfileProvider, useDeviceProfile } from './context/DeviceProfileContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Preloader from './components/Preloader';
-import { AnimatePresence } from 'framer-motion';
 
 const Home = lazy(() => import('./pages/Home'));
 const AllReels = lazy(() => import('./pages/AllReels'));
 const Project = lazy(() => import('./pages/Project'));
+const SeoLanding = lazy(() => import('./pages/SeoLanding'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Login = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -20,19 +20,59 @@ const Settings = lazy(() => import('./pages/admin/Settings'));
 const Notifications = lazy(() => import('./pages/admin/Notifications'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
-const createLenisConfig = () => ({
-  // Lenis v1.0.42 options (see node_modules/@studio-freight/lenis/README.md)
-  duration: 1.05,
-  easing: (t) => 1 - Math.pow(1 - t, 4),
-  orientation: 'vertical',
-  gestureOrientation: 'vertical',
-  smoothWheel: true,
-  syncTouch: false,
-  wheelMultiplier: 0.95,
-  touchMultiplier: 1,
-  autoResize: true,
-  infinite: false
-});
+const LENIS_PRESETS = {
+  public: {
+    key: 'home-public',
+    mode: 'desktop',
+    options: {
+      lerp: 0.09,
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      syncTouch: false,
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1,
+      autoResize: true,
+      infinite: false
+    }
+  },
+  admin: {
+    key: 'admin-general',
+    mode: 'desktop',
+    options: {
+      lerp: 0.12,
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      syncTouch: false,
+      wheelMultiplier: 0.8,
+      touchMultiplier: 1,
+      autoResize: true,
+      infinite: false
+    }
+  },
+  adminHeavy: {
+    key: 'admin-analytics-heavy',
+    mode: 'desktop-heavy',
+    options: {
+      lerp: 0.16,
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      syncTouch: false,
+      wheelMultiplier: 0.72,
+      touchMultiplier: 1,
+      autoResize: true,
+      infinite: false
+    }
+  }
+};
+
+const resolveLenisPreset = (pathname = '/') => {
+  if (pathname.startsWith('/admin/analytics')) return LENIS_PRESETS.adminHeavy;
+  if (pathname.startsWith('/admin')) return LENIS_PRESETS.admin;
+  return LENIS_PRESETS.public;
+};
 
 const MainContent = () => {
   const { isLoading } = useLoading();
@@ -49,17 +89,17 @@ const MainContent = () => {
     window.lenis.start();
   }, [isLoading]);
 
-  // Scroll to new page top on route change
+  // Scroll to top on route change.
   useEffect(() => {
     if (window.lenis) {
-      window.lenis.scrollTo(0, { immediate: true });
+      window.lenis.scrollTo(0, { immediate: true, force: true });
       window.lenis.resize?.();
       return;
     }
     window.scrollTo(0, 0);
   }, [location]);
 
-  // Track one session per tab and keep its duration updated
+  // Track one session per tab and keep its duration updated.
   useEffect(() => {
     if (isLoading || visitIdState) return;
     if (location.pathname.startsWith('/admin')) return;
@@ -73,8 +113,8 @@ const MainContent = () => {
         reelId: null
       })
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const id = (data && (data.visitId || data.visit_id || data.id)) || null;
         if (id) {
           sessionStorage.setItem('portfolioVisitId', String(id));
@@ -82,10 +122,10 @@ const MainContent = () => {
           sessionStartRef.current = Date.now();
         }
       })
-      .catch(err => console.error('Tracking failed', err));
-  }, [location.pathname, isLoading, visitIdState]);
+      .catch((err) => console.error('Tracking failed', err));
+  }, [isLoading, location.pathname, visitIdState]);
 
-  // Update visited page path within the active session
+  // Update visited page path within the active session.
   useEffect(() => {
     if (isLoading || !visitIdState) return;
     if (location.pathname.startsWith('/admin')) return;
@@ -97,10 +137,10 @@ const MainContent = () => {
         visitId: visitIdState,
         pageViewed: location.pathname
       })
-    }).catch(() => { });
-  }, [location.pathname, isLoading, visitIdState]);
+    }).catch(() => {});
+  }, [isLoading, location.pathname, visitIdState]);
 
-  // Session duration heartbeat — runs when we have a visitId
+  // Session duration heartbeat - runs when we have a visitId.
   useEffect(() => {
     if (!visitIdState) return;
 
@@ -124,12 +164,12 @@ const MainContent = () => {
             sessionStartRef.current = Date.now();
           }
         })
-        .catch(() => { });
+        .catch(() => {});
     };
 
     const heartbeatInterval = setInterval(() => {
       sendHeartbeat(false);
-    }, 10000); // Every 10 seconds
+    }, 10000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
@@ -153,9 +193,7 @@ const MainContent = () => {
 
   return (
     <>
-      <AnimatePresence mode="wait">
-        {isLoading && <Preloader />}
-      </AnimatePresence>
+      <AnimatePresence mode="wait">{isLoading && <Preloader />}</AnimatePresence>
 
       {!isLoading && (
         <Suspense
@@ -169,8 +207,10 @@ const MainContent = () => {
             <Route index element={<Home />} />
             <Route path="/reels" element={<AllReels />} />
             <Route path="/project/:slug" element={<Project />} />
+            <Route path="/mishwa-zalavadiya-video-editor-portfolio" element={<SeoLanding />} />
+            <Route path="/mishwa-zalavadiya-portfolio" element={<SeoLanding />} />
+            <Route path="/surat-video-editor-portfolio" element={<SeoLanding />} />
 
-            {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
@@ -188,53 +228,132 @@ const MainContent = () => {
   );
 };
 
-const AppShell = () => {
-  const { perfMode, isTouch, prefersReducedMotion } = useDeviceProfile();
+const LenisManager = () => {
+  const location = useLocation();
+  const profile = useDeviceProfile();
   const lenisRef = useRef(null);
+  const rafRef = useRef(0);
+  const presetKeyRef = useRef('off');
 
-  useEffect(() => {
-    const enableLenis = perfMode !== 'lite' && !prefersReducedMotion && !isTouch;
-    if (!enableLenis) {
-      if (window.lenis && typeof window.lenis.destroy === 'function') {
-        window.lenis.destroy();
-      }
-      window.lenis = null;
-      lenisRef.current = null;
-      return undefined;
+  const preset = useMemo(() => resolveLenisPreset(location.pathname), [location.pathname]);
+  const targetPresetKey = profile.allowLenis ? preset.key : 'off';
+  const targetMode = profile.allowLenis ? preset.mode : 'off';
+
+  const publishProfile = useCallback((overrides = {}) => {
+    window.lenisProfile = Object.freeze({
+      ...profile,
+      activeRoute: location.pathname,
+      activePresetKey: presetKeyRef.current,
+      lenisActive: Boolean(lenisRef.current),
+      ...overrides
+    });
+  }, [location.pathname, profile]);
+
+  const destroyLenis = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+
+    if (lenisRef.current && typeof lenisRef.current.destroy === 'function') {
+      lenisRef.current.destroy();
     }
 
     if (window.lenis && typeof window.lenis.destroy === 'function') {
       window.lenis.destroy();
-      window.lenis = null;
     }
 
-    const lenis = new Lenis(createLenisConfig());
+    lenisRef.current = null;
+    window.lenis = null;
+    presetKeyRef.current = 'off';
+  }, []);
 
-    lenisRef.current = lenis;
-    window.lenis = lenis;
-    let rafId = 0;
+  useEffect(() => () => {
+    destroyLenis();
+    delete window.lenisProfile;
+  }, [destroyLenis]);
 
-    function raf(time) {
-      if (!lenisRef.current) return;
-      lenisRef.current.raf(time);
-      rafId = requestAnimationFrame(raf);
-    }
-    rafId = requestAnimationFrame(raf);
+  useEffect(() => {
+    let cancelled = false;
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      lenis.destroy();
-      lenisRef.current = null;
-      if (window.lenis === lenis) {
-        window.lenis = null;
+    const setupLenis = async () => {
+      if (!profile.allowLenis) {
+        destroyLenis();
+        publishProfile({ activePresetKey: 'off', lenisMode: 'off', lenisActive: false });
+        return;
+      }
+
+      if (lenisRef.current && presetKeyRef.current === preset.key) {
+        publishProfile({ activePresetKey: preset.key, lenisMode: preset.mode, lenisActive: true });
+        return;
+      }
+
+      const currentScroll = window.scrollY;
+
+      try {
+        const lenisModule = await import('lenis');
+        if (cancelled) return;
+
+        const Lenis = lenisModule?.default || lenisModule?.Lenis;
+        if (typeof Lenis !== 'function') {
+          throw new Error('Lenis constructor not found in module.');
+        }
+
+        destroyLenis();
+
+        const lenis = new Lenis(preset.options);
+        lenisRef.current = lenis;
+        window.lenis = lenis;
+        presetKeyRef.current = preset.key;
+
+        const raf = (time) => {
+          if (!lenisRef.current) return;
+          lenisRef.current.raf(time);
+          rafRef.current = requestAnimationFrame(raf);
+        };
+
+        rafRef.current = requestAnimationFrame(raf);
+        lenis.scrollTo(currentScroll, { immediate: true, force: true });
+
+        publishProfile({ activePresetKey: preset.key, lenisMode: preset.mode, lenisActive: true });
+      } catch (error) {
+        console.error('Lenis init failed, using native scroll fallback:', error);
+        destroyLenis();
+        publishProfile({
+          activePresetKey: targetPresetKey,
+          lenisMode: targetMode,
+          lenisActive: false,
+          lenisError: String(error?.message || error)
+        });
       }
     };
-  }, [isTouch, perfMode, prefersReducedMotion]);
+
+    setupLenis();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [destroyLenis, preset, profile.allowLenis, publishProfile, targetMode, targetPresetKey]);
+
+  useEffect(() => {
+    publishProfile({
+      activePresetKey: targetPresetKey,
+      lenisMode: targetMode,
+      lenisActive: Boolean(lenisRef.current)
+    });
+  }, [publishProfile, targetMode, targetPresetKey]);
+
+  return null;
+};
+
+const AppShell = () => {
+  const { perfMode } = useDeviceProfile();
 
   return (
     <Router>
       <ContentProvider>
         <LoadingProvider>
+          <LenisManager />
           <div className="bg-background min-h-screen text-text selection:bg-secondary selection:text-background">
             {perfMode !== 'lite' && (
               <div className="fixed inset-0 pointer-events-none z-0">

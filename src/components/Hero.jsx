@@ -31,6 +31,7 @@ const Hero = () => {
                     transition={{ duration: 0.8, ease: "easeOut" }}
                 >
                     <h2 className="text-secondary font-mono text-sm md:text-base tracking-[0.2em] mb-4">{hero.subtitle}</h2>
+                    <p className="text-white/70 text-sm md:text-base font-semibold tracking-wide mb-4">Mishwa Zalavadiya</p>
                 </motion.div>
 
                 <motion.h1

@@ -9,7 +9,7 @@ const About = () => {
 
     if (!content) return null;
 
-    const aboutText = content.about?.text || "I'm Mishwa, a Surat-based video editor and visual artist who understands the psychology of attention. With a focus on pacing, sound design, and visual storytelling, I help brands convert viewers into followers.";
+    const aboutText = content.about?.text || "I'm Mishwa Zalavadiya, a Surat-based video editor and visual artist who understands the psychology of attention. With a focus on pacing, sound design, and visual storytelling, I help brands convert viewers into followers.";
 
     return (
         <section id="about" className={`py-32 px-6 bg-gradient-to-b from-background to-[#112240] relative overflow-hidden ${isLite ? '' : 'will-change-transform'}`}>

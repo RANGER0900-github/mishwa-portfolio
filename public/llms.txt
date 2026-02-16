@@ -1,0 +1,21 @@
+# Mishwa Portfolio
+
+Official portfolio website for Mishwa Zalavadiya, a Surat-based video editor and visual artist.
+
+## Focus Areas
+- High-retention Instagram Reels editing
+- Cinematic storytelling
+- Social-first video ads and brand edits
+
+## Canonical Site
+- https://mishwa.unitednodes.space
+
+## Key Pages
+- Home: https://mishwa.unitednodes.space/
+- Reels Archive: https://mishwa.unitednodes.space/reels
+- Portfolio Profile: https://mishwa.unitednodes.space/mishwa-zalavadiya-portfolio
+- Video Editor Portfolio: https://mishwa.unitednodes.space/mishwa-zalavadiya-video-editor-portfolio
+- Surat Portfolio: https://mishwa.unitednodes.space/surat-video-editor-portfolio
+
+## Contact / Social
+- Instagram: https://www.instagram.com/_thecoco_club/

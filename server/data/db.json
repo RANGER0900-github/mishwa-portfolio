@@ -12,7 +12,7 @@
     },
     "social": {
       "email": "mishwa@example.com",
-      "instagram": "https://instagram.com/mishwazalavadiya"
+      "instagram": "https://www.instagram.com/_thecoco_club/"
     },
     "footer": {
       "copyright": "© 2026 Mishwa. All rights reserved.",
@@ -41,7 +41,8 @@
           "x": 50,
           "y": 85
         },
-        "slug": "glow-routines"
+        "slug": "glow-routines",
+        "seoDescription": "Glow Routines is a beauty & personal care project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 102,
@@ -50,7 +51,8 @@
         "image": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
         "textColor": "#ffffff",
-        "slug": "bali-villas"
+        "slug": "bali-villas",
+        "seoDescription": "Bali Villas is a travel & local experience project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 103,
@@ -59,7 +61,8 @@
         "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
         "orientation": "portrait",
         "textColor": "#ffffff",
-        "slug": "summer-shades"
+        "slug": "summer-shades",
+        "seoDescription": "Summer Shades is a fashion & apparel project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 104,
@@ -67,7 +70,8 @@
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "espresso-art"
+        "slug": "espresso-art",
+        "seoDescription": "Espresso Art is a food & beverage project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 105,
@@ -75,7 +79,8 @@
         "category": "Fitness & Wellness",
         "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "crossfit-power"
+        "slug": "crossfit-power",
+        "seoDescription": "Crossfit Power is a fitness & wellness project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 106,
@@ -83,7 +88,8 @@
         "category": "Beauty & Personal Care",
         "image": "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "skincare-essentials"
+        "slug": "skincare-essentials",
+        "seoDescription": "Skincare Essentials is a beauty & personal care project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytellin"
       },
       {
         "id": 107,
@@ -91,7 +97,8 @@
         "category": "Fashion & Apparel",
         "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "streetwear-2024"
+        "slug": "streetwear-2024",
+        "seoDescription": "Streetwear 2024 is a fashion & apparel project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 108,
@@ -99,7 +106,8 @@
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "island-life"
+        "slug": "island-life",
+        "seoDescription": "Island Life is a travel & local experience project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 109,
@@ -107,7 +115,8 @@
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1579584425555-c3ce17fd43ea?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "sushi-master"
+        "slug": "sushi-master",
+        "seoDescription": "Sushi Master is a food & beverage project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 110,
@@ -115,7 +124,8 @@
         "category": "Fitness & Wellness",
         "image": "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "yoga-flow"
+        "slug": "yoga-flow",
+        "seoDescription": "Yoga Flow is a fitness & wellness project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 111,
@@ -123,7 +133,8 @@
         "category": "Beauty & Personal Care",
         "image": "https://images.unsplash.com/photo-1522335789203-abd1aaccd158?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "makeup-mastery"
+        "slug": "makeup-mastery",
+        "seoDescription": "Makeup Mastery is a beauty & personal care project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 112,
@@ -131,7 +142,8 @@
         "category": "Fashion & Apparel",
         "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "vintage-vibes"
+        "slug": "vintage-vibes",
+        "seoDescription": "Vintage Vibes is a fashion & apparel project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 113,
@@ -139,7 +151,8 @@
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "parisian-streets"
+        "slug": "parisian-streets",
+        "seoDescription": "Parisian Streets is a travel & local experience project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytellin"
       },
       {
         "id": 114,
@@ -147,7 +160,8 @@
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "burger-bliss"
+        "slug": "burger-bliss",
+        "seoDescription": "Burger Bliss is a food & beverage project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 115,
@@ -155,7 +169,8 @@
         "category": "Fitness & Wellness",
         "image": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "gym-rat"
+        "slug": "gym-rat",
+        "seoDescription": "Gym Rat is a fitness & wellness project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 116,
@@ -163,7 +178,8 @@
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "mountain-peak"
+        "slug": "mountain-peak",
+        "seoDescription": "Mountain Peak is a travel & local experience project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 117,
@@ -171,7 +187,8 @@
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "healthy-greens"
+        "slug": "healthy-greens",
+        "seoDescription": "Healthy Greens is a food & beverage project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 118,
@@ -179,7 +196,8 @@
         "category": "Beauty & Personal Care",
         "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "slug": "spa-day"
+        "slug": "spa-day",
+        "seoDescription": "Spa Day is a beauty & personal care project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       },
       {
         "id": 119,
@@ -187,7 +205,8 @@
         "category": "Fashion & Apparel",
         "image": "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=800&auto=format&fit=crop",
         "orientation": "portrait",
-        "slug": "urban-style"
+        "slug": "urban-style",
+        "seoDescription": "Urban Style is a fashion & apparel project from Mishwa Zalavadiya, a Surat, Gujarat, India-based video editor focused on high-retention reels and cinematic storytelling."
       }
     ],
     "about": {
@@ -293,8 +312,9 @@
       "26208c00-f5d5-4687-8f28-61bacec20c08": 55,
       "1771071911967": 160,
       "f11ea44a-0951-464d-967c-f9389adb9f98": 152,
-      "2979c3e8-68ed-4989-9933-98322997a5f6": 103,
-      "85497c21-5922-43c8-becb-a0f77dd5ec2c": 83
+      "2979c3e8-68ed-4989-9933-98322997a5f6": 6,
+      "85497c21-5922-43c8-becb-a0f77dd5ec2c": 83,
+      "7f400a31-072d-44a2-87c4-e78ff6fd83bd": 80
     },
     "profileOverrides": {
       "26208c00-f5d5-4687-8f28-61bacec20c08": {
@@ -417,7 +437,7 @@
         "pageHistory": [
           "/"
         ],
-        "updatedAt": "2026-02-16T15:49:04.517Z"
+        "updatedAt": "2026-02-16T16:00:24.497Z"
       },
       "85497c21-5922-43c8-becb-a0f77dd5ec2c": {
         "country": "India",
@@ -443,6 +463,31 @@
           "/reels"
         ],
         "updatedAt": "2026-02-16T15:52:31.246Z"
+      },
+      "7f400a31-072d-44a2-87c4-e78ff6fd83bd": {
+        "country": "India",
+        "city": "Surat",
+        "region": "Gujarat",
+        "latitude": 21.16676,
+        "longitude": 72.8334,
+        "isp": "Ishan Netsol Pvt Ltd",
+        "isVpn": false,
+        "connectionType": "wifi",
+        "timezone": "Asia/Kolkata",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "ipapi.is",
+        "pageViewed": "/reels",
+        "pageHistory": [
+          "/",
+          "/reels"
+        ],
+        "updatedAt": "2026-02-16T16:31:16.501Z"
       }
     },
     "clearedAt": "2026-02-08T16:53:36.167Z",
@@ -458,6 +503,16 @@
     }
   },
   "notifications": [
+    {
+      "id": "8c00b873-e59b-4c6a-8dd9-1a06113a72a6",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: 202.179.159.94",
+      "ip": "202.179.159.94",
+      "metadata": null,
+      "timestamp": "2026-02-16T16:31:25.425Z",
+      "read": false
+    },
     {
       "id": "79e2b993-1be2-4d97-a54f-b9f7b14f4beb",
       "type": "security",
@@ -714,7 +769,7 @@
         },
         "social": {
           "email": "mishwa@example.com",
-          "instagram": "https://instagram.com/mishwazalavadiya"
+          "instagram": "https://www.instagram.com/_thecoco_club/"
         },
         "footer": {
           "copyright": "© 2026 Mishwa. All rights reserved.",

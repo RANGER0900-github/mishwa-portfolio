@@ -90,8 +90,8 @@ const NavbarFull = () => {
                         </a>
                     ))}
                     <a
-                        href="#about"
-                        onClick={(e) => handleNav(e, '#about')}
+                        href="#contact"
+                        onClick={(e) => handleNav(e, '#contact')}
                         className="bg-secondary/10 text-secondary border border-secondary px-5 py-2 rounded-full text-sm font-bold hover:bg-secondary hover:text-background transition-all"
                     >
                         Let's Talk
@@ -172,8 +172,8 @@ const NavbarLite = () => {
                         </a>
                     ))}
                     <a
-                        href="#about"
-                        onClick={(e) => handleNav(e, '#about')}
+                        href="#contact"
+                        onClick={(e) => handleNav(e, '#contact')}
                         className="bg-secondary/10 text-secondary border border-secondary px-5 py-2 rounded-full text-sm font-bold hover:bg-secondary hover:text-background transition-all"
                     >
                         Let's Talk

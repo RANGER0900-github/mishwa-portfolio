@@ -21,6 +21,20 @@ const DEFAULT_ARCHIVE_CATEGORIES = [
     "Other"
 ];
 
+const toSeoSlug = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+
+const toSeoDescription = (title, category) => {
+    const safeTitle = String(title || 'Project').trim();
+    const safeCategory = String(category || 'Video Editing').trim();
+    return `${safeTitle} is a ${safeCategory.toLowerCase()} edit by Mishwa Zalavadiya, a Surat-based video editor focused on retention-first storytelling.`.slice(0, 180);
+};
+
 const ContentCMS = () => {
     const { content, updateContent } = useContent();
     const [localContent, setLocalContent] = useState(null);
@@ -128,7 +142,16 @@ const ContentCMS = () => {
 
     const handleProjectChange = (id, field, value) => {
         const updatedProjects = localContent.projects.map(p =>
-            p.id === id ? { ...p, [field]: value } : p
+            p.id === id
+                ? {
+                    ...p,
+                    [field]: field === 'slug' ? toSeoSlug(value) : value,
+                    ...(field === 'title' ? { slug: toSeoSlug(value) || p.slug } : {}),
+                    ...(field === 'title' || field === 'category'
+                        ? { seoDescription: toSeoDescription(field === 'title' ? value : p.title, field === 'category' ? value : p.category) }
+                        : {})
+                }
+                : p
         );
         const newContent = { ...localContent, projects: updatedProjects };
         trackChange(newContent);
@@ -150,6 +173,8 @@ const ContentCMS = () => {
             category: availableCategories[0] || "Other",
             image: "https://images.unsplash.com/photo-1549557613-21c6020586a0",
             link: "",
+            slug: toSeoSlug("New Project"),
+            seoDescription: toSeoDescription("New Project", availableCategories[0] || "Other"),
             orientation: "portrait",
             textColor: "#ffffff",
             textPosition: { x: 50, y: 85 }
@@ -577,6 +602,29 @@ const ContentCMS = () => {
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider text-primary mb-2 flex items-center gap-2"><LinkIcon size={14} /> Redirect Link</label>
                                             <input type="text" value={project.link || ''} onChange={(e) => handleProjectChange(project.id, 'link', e.target.value)} className="w-full bg-[#0a192f] border border-primary/30 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none placeholder-white/20" placeholder="https://instagram.com/reel/..." />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">SEO Slug</label>
+                                                <input
+                                                    type="text"
+                                                    value={project.slug || ''}
+                                                    onChange={(e) => handleProjectChange(project.id, 'slug', e.target.value)}
+                                                    className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-cyan-300 focus:border-primary focus:outline-none"
+                                                    placeholder="mishwa-zalavadiya-video-editor"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">SEO Description</label>
+                                                <textarea
+                                                    value={project.seoDescription || ''}
+                                                    onChange={(e) => handleProjectChange(project.id, 'seoDescription', e.target.value)}
+                                                    className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-primary focus:outline-none min-h-[80px]"
+                                                    maxLength={180}
+                                                    placeholder="Add a clear 140-180 character summary for search snippets"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div>

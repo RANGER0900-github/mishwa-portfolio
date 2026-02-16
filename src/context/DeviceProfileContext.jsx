@@ -9,9 +9,16 @@ export const useDeviceProfile = () => {
   return {
     ua: '',
     isTouch: false,
+    hasFinePointer: true,
+    hasCoarsePointer: false,
+    isDesktopLike: true,
+    isMobileLike: false,
     isIOS: false,
     prefersReducedMotion: false,
-    perfMode: 'full'
+    perfMode: 'full',
+    allowLenis: true,
+    lenisMode: 'desktop',
+    lenisOverride: null
   };
 };
 
@@ -20,13 +27,14 @@ export const DeviceProfileProvider = ({ children }) => {
 
   useEffect(() => {
     document.documentElement.dataset.perf = profile.perfMode;
+    window.lenisProfile = Object.freeze({ ...profile, activePresetKey: 'off', activeRoute: window.location.pathname });
     return () => {
       document.documentElement.dataset.perf = 'full';
+      delete window.lenisProfile;
     };
-  }, [profile.perfMode]);
+  }, [profile]);
 
   const value = useMemo(() => profile, [profile]);
 
   return <DeviceProfileContext.Provider value={value}>{children}</DeviceProfileContext.Provider>;
 };
-

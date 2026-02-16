@@ -345,7 +345,7 @@ const Analytics = () => {
     const searchPending = searchInput.trim() !== searchQuery;
     const pagination = data?.pagination || { page: currentPage, limit: pageSize, total: visits.length };
     const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / (pagination.limit || 1)));
-    const animateRows = deferredVisits.length <= 24;
+    const animateRows = !isMobile && deferredVisits.length <= 12;
 
     const chartData = useMemo(() => {
         if (Array.isArray(stats.daily_visits) && stats.daily_visits.length > 0) {
@@ -996,7 +996,7 @@ const Analytics = () => {
                 )}
 
                 {!isMobile || mobileSections.visitors ? (
-                    <div className="hidden md:block overflow-x-auto" data-lenis-prevent>
+                    <div className="hidden md:block max-h-[560px] overflow-auto pr-1" data-lenis-prevent>
                     <table className="w-full text-left">
                         <thead>
                             <tr className="text-gray-500 text-xs font-bold uppercase tracking-widest border-b border-white/5">
@@ -1070,7 +1070,6 @@ const Analytics = () => {
                                 return (
                                     <motion.tr
                                         key={rowKey}
-                                        layout
                                         initial={{ opacity: 0, y: 8 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.2, delay: Math.min(index * 0.015, 0.24) }}
@@ -1086,14 +1085,13 @@ const Analytics = () => {
                 ) : null}
 
                 {(!isMobile || mobileSections.visitors) && (
-                    <div className="md:hidden space-y-3">
+                    <div className="md:hidden space-y-3 max-h-[65vh] overflow-y-auto pr-1" data-lenis-prevent>
                         <AnimatePresence initial={false}>
                             {deferredVisits.map((v, index) => {
                                 const identity = getVisitorIdentity(v);
                                 return (
                                 <motion.div
                                     key={v.id || `${v.ip}-${index}`}
-                                    layout
                                     initial={animateRows ? { opacity: 0, y: 8 } : false}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={animateRows ? { opacity: 0, y: -8 } : undefined}
@@ -1151,14 +1149,14 @@ const Analytics = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         data-lenis-prevent
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/60"
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
                         onClick={() => setSelectedVisitor(null)}
                     >
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="bg-[#0f172a] border border-white/10 p-4 sm:p-8 rounded-3xl w-full max-w-2xl shadow-2xl relative"
+                            className="bg-[#0f172a] border border-white/10 p-4 sm:p-8 rounded-3xl w-full max-w-2xl max-h-[88vh] overflow-hidden shadow-2xl relative"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
@@ -1183,7 +1181,7 @@ const Analytics = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[420px] overflow-y-auto pr-1" data-lenis-prevent>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[min(70vh,560px)] overflow-y-auto pr-1" data-lenis-prevent>
                                 <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <p className="text-xs text-gray-500 font-bold uppercase mb-2">Location</p>
                                     <div className="flex items-center gap-2">
@@ -1260,7 +1258,7 @@ const Analytics = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         data-lenis-prevent
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm bg-black/60"
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
                     >
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}

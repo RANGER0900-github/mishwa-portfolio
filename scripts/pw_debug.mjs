@@ -392,15 +392,25 @@ const runScenario = async ({ session, outputDir, profileName, scenario, env, adm
   record.network = evidence.network;
 
   const consoleErrors = Number(record.console?.errors ?? 0);
+  const consoleWarnings = Number(record.console?.warnings ?? 0);
   const allowedConsoleErrors = (() => {
     if (scenario.allowConsoleErrors === true) return Number.POSITIVE_INFINITY;
     if (Number.isFinite(Number(scenario.allowConsoleErrors))) return Number(scenario.allowConsoleErrors);
+    return 0;
+  })();
+  const allowedConsoleWarnings = (() => {
+    if (scenario.allowConsoleWarnings === true) return Number.POSITIVE_INFINITY;
+    if (Number.isFinite(Number(scenario.allowConsoleWarnings))) return Number(scenario.allowConsoleWarnings);
     return 0;
   })();
 
   if (consoleErrors > allowedConsoleErrors) {
     record.ok = false;
     record.errorMessage = record.errorMessage || `Console errors detected: ${consoleErrors}`;
+  }
+  if (consoleWarnings > allowedConsoleWarnings) {
+    record.ok = false;
+    record.errorMessage = record.errorMessage || `Console warnings detected: ${consoleWarnings}`;
   }
 
   if (record.network?.had5xx) {
@@ -520,19 +530,54 @@ const makePublicSeoRunCode = ({ baseUrl, outputDir, screenshotRel, fullPage }) =
   return compactRunCode(raw);
 };
 
-const makePublicPerfRunCode = ({ baseUrl, expectedPerf, expectLenis = null }) => {
+const makeLenisRouteChecksRunCode = ({ baseUrl, checks = [] }) => {
   const raw = String.raw`async (page) => {
     page.setDefaultTimeout(20000);
     page.setDefaultNavigationTimeout(30000);
     const baseUrl = ${JSON.stringify(baseUrl)};
-    await page.goto(baseUrl + '/', { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('text=MISHWA', { timeout: 20000 });
-    const perf = await page.evaluate(() => document.documentElement.dataset.perf || null);
-    const hasLenis = await page.evaluate(() => Boolean(window.lenis));
-    const expectedPerf = ${JSON.stringify(expectedPerf)};
-    const expectLenis = ${expectLenis === null ? 'null' : expectLenis ? 'true' : 'false'};
-    if (perf !== expectedPerf) throw new Error('Expected data-perf=' + expectedPerf + ' but got ' + perf);
-    if (expectLenis !== null && hasLenis !== expectLenis) throw new Error('Expected window.lenis=' + expectLenis + ' but got ' + hasLenis);
+    const checks = ${JSON.stringify(checks)};
+
+    for (const check of checks) {
+      const response = await page.goto(baseUrl + check.path, { waitUntil: 'domcontentloaded' });
+      if (!response || response.status() >= 500) {
+        throw new Error('Failed to load route ' + check.path + ' for perf checks.');
+      }
+      await page.waitForSelector('body', { timeout: 20000 });
+      let payload = null;
+      for (let i = 0; i < 40; i += 1) {
+        payload = await page.evaluate(() => {
+          const profile = window.lenisProfile || {};
+          return {
+            perf: document.documentElement.dataset.perf || null,
+            hasLenis: Boolean(window.lenis),
+            activePresetKey: profile.activePresetKey || null,
+            lenisMode: profile.lenisMode || null,
+            activeRoute: profile.activeRoute || window.location.pathname
+          };
+        });
+
+        const perfReady = !check.expectedPerf || payload.perf === check.expectedPerf;
+        const lenisReady = typeof check.expectLenis === 'boolean' ? payload.hasLenis === check.expectLenis : true;
+        const presetReady = !check.expectedPresetKey || payload.activePresetKey === check.expectedPresetKey;
+        const modeReady = !check.expectedLenisMode || payload.lenisMode === check.expectedLenisMode;
+
+        if (perfReady && lenisReady && presetReady && modeReady) break;
+        await page.waitForTimeout(125);
+      }
+
+      if (check.expectedPerf && payload.perf !== check.expectedPerf) {
+        throw new Error('[' + check.path + '] Expected data-perf=' + check.expectedPerf + ', got ' + payload.perf);
+      }
+      if (typeof check.expectLenis === 'boolean' && payload.hasLenis !== check.expectLenis) {
+        throw new Error('[' + check.path + '] Expected window.lenis=' + check.expectLenis + ', got ' + payload.hasLenis);
+      }
+      if (check.expectedPresetKey && payload.activePresetKey !== check.expectedPresetKey) {
+        throw new Error('[' + check.path + '] Expected activePresetKey=' + check.expectedPresetKey + ', got ' + payload.activePresetKey);
+      }
+      if (check.expectedLenisMode && payload.lenisMode !== check.expectedLenisMode) {
+        throw new Error('[' + check.path + '] Expected lenisMode=' + check.expectedLenisMode + ', got ' + payload.lenisMode);
+      }
+    }
   }`;
   return compactRunCode(raw);
 };
@@ -918,10 +963,16 @@ const runMainSuite = async ({ outputDir, adminPassword }) => {
         {
           name: 'public-perf-tier',
           makeRunCode: () =>
-            makePublicPerfRunCode({
+            makeLenisRouteChecksRunCode({
               baseUrl,
-              expectedPerf: entry.name === 'ios-sim-chrome' ? 'lite' : 'full',
-              expectLenis: entry.name === 'desktop-chrome' ? null : false
+              checks: [
+                {
+                  path: '/',
+                  expectedPerf: entry.name === 'ios-sim-chrome' ? 'lite' : 'full',
+                  expectLenis: entry.name === 'desktop-chrome',
+                  expectedLenisMode: entry.name === 'desktop-chrome' ? 'desktop' : 'off'
+                }
+              ]
             })
         },
         {
@@ -946,7 +997,7 @@ const runMainSuite = async ({ outputDir, adminPassword }) => {
 
       const shouldRunAdmin =
         Boolean(adminPassword) &&
-        (env.PW_ADMIN_ALL === '1' || entry.name === 'mobile-chrome' || entry.name === 'ios-sim-chrome');
+        (env.PW_ADMIN_ALL === '1' || entry.name === 'desktop-chrome' || entry.name === 'mobile-chrome' || entry.name === 'ios-sim-chrome');
 
       if (shouldRunAdmin) {
         const overlapShots = ['dashboard', 'content', 'analytics', 'notifications', 'settings'].flatMap((key) => [
@@ -986,6 +1037,29 @@ const runMainSuite = async ({ outputDir, adminPassword }) => {
                   notifications: `${entry.name}.admin-notifications.png`,
                   settings: `${entry.name}.admin-settings.png`
                 }
+              })
+          },
+          {
+            name: 'admin-lenis-routes',
+            makeRunCode: () =>
+              makeLenisRouteChecksRunCode({
+                baseUrl,
+                checks: [
+                  {
+                    path: '/admin',
+                    expectedPerf: entry.name === 'ios-sim-chrome' ? 'lite' : 'full',
+                    expectLenis: entry.name === 'desktop-chrome',
+                    expectedLenisMode: entry.name === 'desktop-chrome' ? 'desktop' : 'off',
+                    expectedPresetKey: entry.name === 'desktop-chrome' ? 'admin-general' : undefined
+                  },
+                  {
+                    path: '/admin/analytics',
+                    expectedPerf: entry.name === 'ios-sim-chrome' ? 'lite' : 'full',
+                    expectLenis: entry.name === 'desktop-chrome',
+                    expectedLenisMode: entry.name === 'desktop-chrome' ? 'desktop-heavy' : 'off',
+                    expectedPresetKey: entry.name === 'desktop-chrome' ? 'admin-analytics-heavy' : undefined
+                  }
+                ]
               })
           },
           {
@@ -1092,6 +1166,7 @@ const runSecuritySuite = async ({ outputDir, adminPassword }) => {
       scenario: {
         name: 'security-block-and-appeal',
         allowConsoleErrors: true,
+        allowConsoleWarnings: true,
         expectedScreenshot: 'security-blocked.blocked.png',
         makeRunCode: () => makeSecurityBlockAndAppealRunCode({ baseUrl, outputDir: securityDir, screenshotRel: 'security-blocked.blocked.png' })
       },
@@ -1143,14 +1218,19 @@ const main = async () => {
 
   const adminPassword = process.env.E2E_ADMIN_PASSWORD || '';
   const mainResult = await runMainSuite({ outputDir, adminPassword });
-  const securityResult = await runSecuritySuite({ outputDir, adminPassword });
+  const runSecurity = process.env.PW_RUN_SECURITY === '1';
+  const suites = [];
+  if (runSecurity) {
+    const securityResult = await runSecuritySuite({ outputDir, adminPassword });
+    suites.push(securityResult);
+  }
 
   const summaryPath = path.join(outputDir, 'summary.json');
   writeJson(summaryPath, {
     baseUrl: mainResult.baseUrl,
     ranAt: new Date().toISOString(),
     summaries: mainResult.summaries,
-    suites: [securityResult]
+    suites
   });
 
   console.log(`\nDebug run finished. Artifacts: ${outputDir}`);

@@ -111,3 +111,146 @@
 ## Current File Policy
 - This is the single structured debug markdown file.
 - Additional temporary debug markdown files should not be created.
+
+## Lenis Desktop-First Optimization (2026-02-16)
+
+### Plan Scope Implemented
+1. Migrated Lenis package to maintained `lenis`.
+2. Reworked device profiling so touch-capable laptops are still classified as desktop-like when a fine pointer exists.
+3. Added explicit `allowLenis` + `lenisMode` signals and runtime debug surface on `window.lenisProfile`.
+4. Added route-aware Lenis presets:
+   - `home-public`
+   - `admin-general`
+   - `admin-analytics-heavy`
+5. Implemented dynamic Lenis import and guarded fallback to native scroll if initialization fails.
+6. Added admin menu scroll-lock fallback when Lenis is unavailable (`document.body.style.overflow`).
+7. Updated Playwright debug harness to enforce Lenis checks on `/`, `/admin`, and `/admin/analytics`.
+8. Removed redundant debug/status markdown files and kept this file as the single source of truth.
+
+### Root Cause Closed
+- Previous gate `!isTouch` disabled Lenis on many Windows laptops with touchscreens.
+- New logic uses pointer capability (`fine`/`coarse`) and iOS detection instead.
+
+### Validation Checklist (current status)
+- `npm install` (required after dependency migration): completed
+- `npm run lint`: completed with pre-existing repo-wide failures unrelated to this Lenis change set (output artifacts + legacy files)
+- `npm run build`: completed
+- `SKIP_BUILD=1 npm run pw:debug`: completed
+
+### Latest Run Evidence
+- Playwright artifact root: `output/playwright/debug-2026-02-16T16-21-14-545Z`
+- Summary: `output/playwright/debug-2026-02-16T16-21-14-545Z/summary.json`
+- Result: `ALL_OK` for all executed scenarios.
+- Note: admin scenarios requiring authentication were skipped because `E2E_ADMIN_PASSWORD` was not set in this run.
+
+### Next Verification Targets
+1. Desktop profile must report `window.lenis === true` with `data-perf=full`.
+2. When `E2E_ADMIN_PASSWORD` is set, harness scenario `admin-lenis-routes` verifies desktop `/admin` and `/admin/analytics`:
+   - `/admin` => `activePresetKey=admin-general`
+   - `/admin/analytics` => `activePresetKey=admin-analytics-heavy`
+3. Mobile + iOS-sim must report `window.lenis === false`.
+
+## SEO Master Plan And Execution Report (2026-02-16)
+
+### Goals
+1. Increase indexability and ranking relevance for:
+   - `mishwa zalavadiya video editor portfolio`
+   - `mishwa zalavadiya portfolio`
+   - `surat video editor portfolio`
+2. Improve social sharing previews (WhatsApp/Discord/Telegram).
+3. Keep bots and AI crawlers fully allowed on public routes while protecting admin/API routes.
+
+### Implemented Technical SEO
+1. Strengthened route-aware SEO meta injection in `server/index.js`:
+   - richer titles/descriptions/keywords by route
+   - dynamic OpenGraph + Twitter meta with logo image fallback
+   - expanded JSON-LD (`Person`, `WebSite`, `CollectionPage`, `ProfilePage`, `CreativeWork`)
+2. Added landing-route SEO mapping:
+   - `/mishwa-zalavadiya-video-editor-portfolio`
+   - `/mishwa-zalavadiya-portfolio`
+   - `/surat-video-editor-portfolio`
+3. Updated `/sitemap.xml` generation:
+   - includes home, reels, landing pages, and all project slug pages
+   - de-duplicates project slugs
+4. Updated `/robots.txt`:
+   - disallow `/admin/` and `/api/`
+   - allow public crawling
+   - explicit AI bot directives (`GPTBot`, `OAI-SearchBot`, `Google-Extended`, `ClaudeBot`, `PerplexityBot`, `CCBot`)
+   - host + sitemap hints
+5. Added project SEO field normalization:
+   - auto-sanitized `slug`
+   - auto-filled/sanitized `seoDescription`
+
+### Implemented Content/UX SEO
+1. Added dedicated SEO landing page component and routes (`src/pages/SeoLanding.jsx`).
+2. Added crawlable internal links to landing pages in footer (`src/components/Footer.jsx`).
+3. Updated hero/about copy defaults to include full name and location context.
+4. Ensured Instagram identity uses: `https://www.instagram.com/_thecoco_club/`.
+
+### Favicon + Social Preview Optimization
+1. Added full favicon pack under `public/favicons/`.
+2. Added `public/my-logo-circle.png` and made it the default SEO social image.
+3. Updated `index.html` with proper icon links, webmanifest, and fallback social meta.
+4. Added static cache rules for favicons/logo in Express static headers.
+5. Added `public/llms.txt` for AI context discovery.
+
+### Admin SEO Content Management Upgrade
+1. Added `SEO Slug` and `SEO Description` fields in `src/pages/admin/ContentCMS.jsx`.
+2. New projects now auto-generate slug + SEO description.
+3. Title/category edits auto-refresh SEO fields for consistency.
+
+### Validation Runs
+1. `npm run build`: pass.
+2. `node scripts/seo_smoke.mjs`: pass.
+   - verified `200` for new landing pages
+   - verified sitemap and robots output
+   - verified noindex behavior for admin/not-found routes
+   - verified favicon and logo assets resolve
+
+### Known Validation Gap
+1. `npm run lint` still fails due pre-existing repository-wide lint debt (including generated `output/playwright` artifacts and legacy files). This is not introduced by the SEO change set.
+
+### Debug Evidence (Post-SEO)
+1. Playwright suite run:
+   - Command: `SKIP_BUILD=1 npm run pw:debug`
+   - Artifact root: `output/playwright/debug-2026-02-16T17-33-57-345Z`
+   - Summary file: `output/playwright/debug-2026-02-16T17-33-57-345Z/summary.json`
+   - Result: scenarios completed with `exit code 0` (public desktop/mobile/iOS-sim + isolated security flow)
+
+### Production Rollout Checklist
+1. Set env in production:
+   - `PUBLIC_SITE_URL=https://mishwa.unitednodes.space`
+   - `SEO_OWNER_NAME=Mishwa Zalavadiya`
+   - `SEO_INSTAGRAM_URL=https://www.instagram.com/_thecoco_club/`
+   - `SEO_DEFAULT_IMAGE=/my-logo-circle.png`
+2. Deploy and verify:
+   - `/robots.txt`
+   - `/sitemap.xml`
+   - landing pages + one `/project/:slug`
+3. In Google Search Console:
+   - add domain property for `mishwa.unitednodes.space`
+   - submit sitemap
+   - request indexing for `/`, `/reels`, and all 3 landing pages.
+
+## Playwright Warning/Error Cleanup (2026-02-16)
+
+### Root Cause Analysis
+1. Console warnings came from unused preload:
+   - `my-logo-circle.png was preloaded ... but not used`
+2. Security suite produced expected 403 console errors by design (blocked-IP flow), which polluted normal debug output.
+
+### Fixes Applied
+1. Removed non-critical image preload tags from `index.html`.
+2. Hardened `scripts/pw_debug.mjs`:
+   - public/admin scenarios now fail if console warnings are non-zero.
+   - security suite moved behind opt-in env flag `PW_RUN_SECURITY=1`.
+
+### Verification
+1. Command run:
+   - `npm run build`
+   - `SKIP_BUILD=1 npm run pw:debug`
+2. Artifact summary:
+   - `output/playwright/debug-2026-02-16T17-44-14-462Z/summary.json`
+3. Result:
+   - All public profile steps passed.
+   - `warnings: 0`, `errors: 0` for all steps in desktop/mobile/iOS-sim.
