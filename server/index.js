@@ -430,28 +430,279 @@ const SEO_PRIMARY_BRAND_ROUTE = sanitizeString(process.env.SEO_PRIMARY_BRAND_ROU
 const SEO_INDEX_REELS = String(process.env.SEO_INDEX_REELS || 'true').trim().toLowerCase() !== 'false';
 const SEO_ENABLE_CONTENT_HUB = String(process.env.SEO_ENABLE_CONTENT_HUB || 'true').trim().toLowerCase() !== 'false';
 const SEO_ENABLE_BREADCRUMB_SCHEMA = String(process.env.SEO_ENABLE_BREADCRUMB_SCHEMA || 'true').trim().toLowerCase() !== 'false';
-const SEO_DEFAULT_KEYWORDS = [
-    'Mishwa Zalavadiya video editor portfolio',
-    'Mishwa Zalavadiya portfolio',
-    'Mishwa portfolio',
-    'Mishwa Surat portfolio',
-    'Mishwa video editor portfolio',
-    'Surat video editor portfolio',
-    'best video editor portfolio',
-    'Instagram Reels editor',
-    'high retention reels editor',
-    'cinematic storytelling editor',
-    'freelance video editor India'
-];
+const buildSeoKeywordUniverse = () => {
+    const brandTerms = [
+        'Mishwa',
+        'Mishwa Zalavadiya',
+        'Mishwa portfolio',
+        'Mishwa video editor',
+        'Mishwa Zalavadiya portfolio',
+        'Mishwa Zalavadiya video editor',
+        'Mishwa Zalavadiya Instagram editor',
+        'Mishwa editor',
+        'Mishwa reels editor',
+        'Mishwa cinematic editor',
+        'Mishwa content editor'
+    ];
+    const serviceTerms = [
+        'video editor',
+        'video editing',
+        'video editor portfolio',
+        'best video editor',
+        'professional video editor',
+        'freelance video editor',
+        'Instagram video editor',
+        'Instagram Reels editor',
+        'short form video editor',
+        'social media video editor',
+        'cinematic video editor',
+        'retention video editor',
+        'high retention reels editor',
+        'brand storytelling editor',
+        'short video editor',
+        'youtube shorts editor',
+        'tiktok style editor',
+        'ugc video editor',
+        'ad video editor',
+        'commercial video editor',
+        'event video editor',
+        'wedding reel editor',
+        'fashion reel editor',
+        'food reel editor',
+        'real estate reel editor',
+        'ecommerce video editor',
+        'podcast clips editor',
+        'viral reels editor'
+    ];
+    const locationTerms = [
+        'India',
+        'Pan India',
+        'All India',
+        'Surat',
+        'Ankleshwar',
+        'Ahmedabad',
+        'Vadodara',
+        'Rajkot',
+        'Bhavnagar',
+        'Jamnagar',
+        'Junagadh',
+        'Gandhinagar',
+        'Bharuch',
+        'Navsari',
+        'Valsad',
+        'Vapi',
+        'Nadiad',
+        'Anand',
+        'Mehsana',
+        'Palanpur',
+        'Bhuj',
+        'Porbandar',
+        'Gujarat',
+        'Mumbai',
+        'Pune',
+        'Nagpur',
+        'Nashik',
+        'Thane',
+        'Aurangabad',
+        'Maharashtra',
+        'Delhi',
+        'New Delhi',
+        'Noida',
+        'Gurgaon',
+        'Faridabad',
+        'Ghaziabad',
+        'Uttar Pradesh',
+        'Lucknow',
+        'Kanpur',
+        'Varanasi',
+        'Prayagraj',
+        'Agra',
+        'Meerut',
+        'Bihar',
+        'Patna',
+        'Gaya',
+        'Jharkhand',
+        'Ranchi',
+        'Jamshedpur',
+        'West Bengal',
+        'Kolkata',
+        'Howrah',
+        'Durgapur',
+        'Siliguri',
+        'Odisha',
+        'Bhubaneswar',
+        'Cuttack',
+        'Rourkela',
+        'Assam',
+        'Guwahati',
+        'Punjab',
+        'Chandigarh',
+        'Ludhiana',
+        'Amritsar',
+        'Jalandhar',
+        'Rajasthan',
+        'Jaipur',
+        'Jodhpur',
+        'Udaipur',
+        'Kota',
+        'Ajmer',
+        'Madhya Pradesh',
+        'Indore',
+        'Bhopal',
+        'Gwalior',
+        'Jabalpur',
+        'Chhattisgarh',
+        'Raipur',
+        'Bhilai',
+        'Haryana',
+        'Panipat',
+        'Karnal',
+        'Himachal Pradesh',
+        'Shimla',
+        'Uttarakhand',
+        'Dehradun',
+        'Haridwar',
+        'Jammu and Kashmir',
+        'Srinagar',
+        'Jammu',
+        'Ladakh',
+        'Leh',
+        'Telangana',
+        'Hyderabad',
+        'Warangal',
+        'Andhra Pradesh',
+        'Visakhapatnam',
+        'Vijayawada',
+        'Guntur',
+        'Kurnool',
+        'Tamil Nadu',
+        'Chennai',
+        'Coimbatore',
+        'Madurai',
+        'Salem',
+        'Tiruchirappalli',
+        'Kerala',
+        'Kochi',
+        'Thiruvananthapuram',
+        'Kozhikode',
+        'Kannur',
+        'Karnataka',
+        'Bengaluru',
+        'Mysuru',
+        'Mangalore',
+        'Hubli',
+        'Belgaum',
+        'Goa',
+        'Panaji',
+        'North Goa',
+        'South Goa',
+        'Puducherry',
+        'Pondicherry'
+    ];
+    const intentTerms = [
+        'portfolio',
+        'services',
+        'hire',
+        'expert',
+        'creator',
+        'for brands',
+        'for creators',
+        'for Instagram growth',
+        'near me',
+        'online',
+        'remote',
+        'agency',
+        'freelancer',
+        'for business',
+        'for startups',
+        'for ecommerce',
+        'for influencers',
+        'for coaches',
+        'for creators in india'
+    ];
+    const explicitHighIntent = [
+        'mishwa zalavadiya video editor surat',
+        'mishwa zalaydiya video editor surat',
+        'mishwa zalavadia video editor surat',
+        'mishwa zalavadiya instagram video editor',
+        'mishwa zalaydiya instagram video editor',
+        'mishwa zalavadiya reels editor',
+        'mishwa video editor surat',
+        'mishwa surat portfolio',
+        'mishwa ankleshwar video editor',
+        'best video editor surat',
+        'best instagram reels editor surat',
+        'instagram video editor mishwa zalavadiya',
+        'video editor ankleshwar',
+        'instagram reels editor ankleshwar',
+        'video editor india mishwa zalavadiya'
+    ];
+
+    const keywords = new Set(explicitHighIntent.map((value) => value.trim()));
+
+    for (const brand of brandTerms) {
+        keywords.add(brand);
+        for (const service of serviceTerms) {
+            keywords.add(`${brand} ${service}`);
+            keywords.add(`${service} ${brand}`);
+        }
+        for (const location of locationTerms) {
+            keywords.add(`${brand} ${location}`);
+            keywords.add(`${brand} portfolio ${location}`);
+        }
+    }
+
+    for (const service of serviceTerms) {
+        keywords.add(service);
+        for (const location of locationTerms) {
+            keywords.add(`${service} ${location}`);
+            keywords.add(`best ${service} ${location}`);
+            keywords.add(`hire ${service} ${location}`);
+        }
+        for (const intent of intentTerms) {
+            keywords.add(`${service} ${intent}`);
+            keywords.add(`${intent} ${service}`);
+        }
+    }
+
+    for (const brand of brandTerms) {
+        for (const service of serviceTerms) {
+            for (const location of locationTerms) {
+                keywords.add(`${brand} ${service} ${location}`);
+                keywords.add(`${service} ${brand} ${location}`);
+                keywords.add(`hire ${brand} ${service} ${location}`);
+                keywords.add(`best ${brand} ${service} ${location}`);
+                keywords.add(`${brand} ${location} ${service}`);
+            }
+        }
+    }
+
+    for (const location of locationTerms) {
+        keywords.add(`video editor in ${location}`);
+        keywords.add(`best video editor in ${location}`);
+        keywords.add(`instagram reels editor in ${location}`);
+        keywords.add(`freelance video editor in ${location}`);
+        keywords.add(`cinematic video editor in ${location}`);
+        keywords.add(`mishwa zalavadiya ${location}`);
+        keywords.add(`mishwa video editor ${location}`);
+        keywords.add(`mishwa zalavadiya video editor ${location}`);
+    }
+
+    return Array.from(keywords).slice(0, 15000);
+};
+
+const SEO_DEFAULT_KEYWORDS = buildSeoKeywordUniverse();
+const SEO_META_KEYWORD_LIMIT = Math.max(120, Math.min(600, Number.parseInt(process.env.SEO_META_KEYWORD_LIMIT || '250', 10) || 250));
 const SEO_LANDING_PAGES = Object.freeze({
     '/mishwa-zalavadiya-video-editor-portfolio': {
         title: `${SEO_OWNER_NAME} Video Editor Portfolio | ${SEO_LOCATION}`,
-        description: `${SEO_OWNER_NAME} is a ${SEO_LOCATION}-based video editor specializing in high-retention Instagram Reels, ad creatives, and cinematic storytelling edits.`,
+        description: `${SEO_OWNER_NAME} is a ${SEO_LOCATION}-based video editor specializing in high-retention Instagram Reels, ad creatives, and cinematic storytelling edits for clients across India, including Ankleshwar.`,
         keywords: [
             'mishwa zalavadiya video editor portfolio',
             'mishwa zalavadiya reels editor',
             'surat video editor portfolio',
-            'instagram reels editor surat'
+            'instagram reels editor surat',
+            'video editor ankleshwar'
         ]
     },
     '/mishwa-zalavadiya-portfolio': {
@@ -466,12 +717,13 @@ const SEO_LANDING_PAGES = Object.freeze({
     },
     '/surat-video-editor-portfolio': {
         title: `Surat Video Editor Portfolio | ${SEO_OWNER_NAME}`,
-        description: `${SEO_OWNER_NAME} builds scroll-stopping content for brands in Surat and beyond with premium reel editing and social-first storytelling.`,
+        description: `${SEO_OWNER_NAME} builds scroll-stopping content for brands in Surat and across India, including Ankleshwar, with premium reel editing and social-first storytelling.`,
         keywords: [
             'surat video editor',
             'surat reel editor',
             'video editor gujarat',
-            'instagram video editor surat'
+            'instagram video editor surat',
+            'ankleshwar video editor'
         ]
     }
 });
@@ -2326,14 +2578,24 @@ app.get('/sitemaps/:segment.xml', (req, res) => {
 // Robots.txt for SEO
 app.get('/robots.txt', (req, res) => {
     const baseUrl = getPreferredPublicBaseUrl(req);
+    const botApiAllowPaths = [
+        '/api/content',
+        '/api/track',
+        '/api/track/page',
+        '/api/track/heartbeat',
+        '/api/track/reel'
+    ];
+    const botApiAllowRules = botApiAllowPaths.map((path) => `Allow: ${path}`).join('\n');
     const aiBotDirectives = SEO_AI_BOT_ALLOWLIST.map((bot) => `User-agent: ${bot}
 Allow: /
+${botApiAllowRules}
 Disallow: /admin/
 Disallow: /api/
 `).join('\n');
 
     const robotsTxt = `User-agent: *
 Allow: /
+${botApiAllowRules}
 Disallow: /admin/
 Disallow: /api/
 
@@ -3843,7 +4105,7 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     const homeTitle = SEO_PRIMARY_BRAND_ROUTE === '/'
         ? `${ownerName} - Video Editor in Surat | Official Portfolio`
         : `${ownerName} | Surat Video Editor Portfolio`;
-    const description = `${ownerName} is a Surat-based video editor and visual artist specializing in high-retention Instagram Reels, cinematic brand storytelling, and portfolio edits built for measurable audience growth.`;
+    const description = `${ownerName} is a Surat-based video editor and visual artist specializing in high-retention Instagram Reels, cinematic brand storytelling, and portfolio edits for clients across India, including Ankleshwar.`;
     return buildSeoPayload({
         title: homeTitle,
         description,
@@ -3953,8 +4215,8 @@ const markScriptsAsCloudflareSafe = (html) => {
 
 const renderSeoMetaBlock = (seo, nonce, { includeAnalytics = false } = {}) => {
     const keywords = Array.isArray(seo.keywords) && seo.keywords.length > 0
-        ? seo.keywords.join(', ')
-        : SEO_DEFAULT_KEYWORDS.join(', ');
+        ? seo.keywords.slice(0, SEO_META_KEYWORD_LIMIT).join(', ')
+        : SEO_DEFAULT_KEYWORDS.slice(0, SEO_META_KEYWORD_LIMIT).join(', ');
     const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
     const jsonLdBlocks = Array.isArray(seo.jsonLd) && seo.jsonLd.length > 0
         ? seo.jsonLd
@@ -4073,6 +4335,7 @@ app.listen(PORT, () => {
     console.log('Health endpoint: /api/health');
     console.log(`Supabase URL: ${supabaseUrl}`);
     console.log(`Supabase analytics enabled: ${SUPABASE_ANALYTICS_ENABLED}`);
+    console.log(`SEO keyword corpus size: ${SEO_DEFAULT_KEYWORDS.length} (meta cap=${SEO_META_KEYWORD_LIMIT})`);
     console.log(`DB path: ${DB_PATH}`);
     console.log(`Static build present: ${HAS_DIST}`);
     if (!REDIS_ENABLED) {
