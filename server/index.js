@@ -159,6 +159,230 @@ const ensureProjectSeoFields = (content) => {
     return { content, changed };
 };
 
+const sanitizeSeoFaqItems = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items
+        .map((item) => {
+            if (!item || typeof item !== 'object') return null;
+            const q = sanitizeString(item.q || item.question || '', 180);
+            const a = sanitizeString(item.a || item.answer || '', 500);
+            if (!q || !a) return null;
+            return { q, a };
+        })
+        .filter(Boolean)
+        .slice(0, 12);
+};
+
+const buildDefaultSeoHubEntries = (content, type) => {
+    const projects = Array.isArray(content?.projects) ? content.projects : [];
+    const projectSlugs = projects
+        .map((project) => (project?.slug && isValidSlug(project.slug) ? project.slug : slugify(project?.title || '')))
+        .filter(Boolean);
+
+    const baseFaqs = [
+        { q: 'Can you edit for Instagram Reels?', a: 'Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff.' },
+        { q: 'Do you work with brands outside Surat?', a: 'Yes. I collaborate remotely with creators and brands across India and international markets.' },
+        { q: 'Do you provide revisions?', a: 'Yes. Revision rounds are included based on project scope and deliverables.' }
+    ];
+
+    const serviceTitles = [
+        'Instagram Reels Editing Service',
+        'Brand Storytelling Video Editing',
+        'Short-Form Ad Creative Editing',
+        'Creator Content Retention Editing',
+        'Cinematic Lifestyle Edit Service',
+        'Product Reel Editing Service',
+        'Travel Reel Editing Service',
+        'Food & Beverage Reel Editing Service'
+    ];
+
+    const guideTitles = [
+        'How to Improve Reel Retention in 30 Seconds',
+        'Hook and Payoff Editing Structure for Instagram Reels',
+        'Cinematic Storytelling for Short Form Video',
+        'Cutting Patterns That Improve Watch Time',
+        'How to Build Brand-Consistent Reel Edits',
+        'Sound Design Basics for Reels',
+        'Color and Contrast Workflow for Mobile-First Videos',
+        'How to Plan Reels for Better Conversion'
+    ];
+
+    if (type === 'services') {
+        return serviceTitles.map((title, index) => ({
+            id: `services-${index + 1}`,
+            slug: slugify(title),
+            title,
+            excerpt: `${title} by ${SEO_OWNER_NAME} for brands and creators seeking high-retention short-form video outcomes.`,
+            primaryKeyword: title.toLowerCase(),
+            secondaryKeywords: ['surat video editor', 'high retention reels editor', 'cinematic editing'],
+            intro: `${SEO_OWNER_NAME} delivers ${title.toLowerCase()} with retention-focused pacing, story clarity, and social-first visual flow.`,
+            sections: [
+                {
+                    heading: 'What this service includes',
+                    body: 'Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance.'
+                },
+                {
+                    heading: 'Who this is best for',
+                    body: 'Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements.'
+                }
+            ],
+            faqs: baseFaqs,
+            relatedProjectSlugs: projectSlugs.slice(index, index + 2),
+            heroImage: projects[index % Math.max(1, projects.length)]?.image || '',
+            publishedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            indexable: true
+        }));
+    }
+
+    if (type === 'caseStudies') {
+        const selectedProjects = projects.slice(0, 8);
+        return selectedProjects.map((project, index) => ({
+            id: `case-study-${index + 1}`,
+            slug: slugify(`${project.title || `project-${index + 1}`} case study`),
+            title: `${project.title || `Project ${index + 1}`} Case Study`,
+            excerpt: `Case study for ${project.title || `Project ${index + 1}`}: edit strategy, visual pacing, and retention-focused storytelling decisions.`,
+            primaryKeyword: `${project.title || 'video'} case study`,
+            secondaryKeywords: [project.category || 'video editing', 'short form editing workflow', 'reel editing strategy'],
+            intro: `A detailed case study for ${project.title || `Project ${index + 1}`} covering structure, pacing, and final narrative outcome.`,
+            sections: [
+                {
+                    heading: 'Project brief and challenge',
+                    body: `Initial objective: improve attention and clarity for ${project.category || 'short-form content'} while preserving brand tone and visual consistency.`
+                },
+                {
+                    heading: 'Editing framework and execution',
+                    body: 'Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent.'
+                },
+                {
+                    heading: 'Outcome and learnings',
+                    body: 'The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability.'
+                }
+            ],
+            faqs: baseFaqs,
+            relatedProjectSlugs: [project.slug].filter(Boolean),
+            heroImage: project.image || '',
+            publishedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            indexable: true
+        }));
+    }
+
+    return guideTitles.map((title, index) => ({
+        id: `guide-${index + 1}`,
+        slug: slugify(title),
+        title,
+        excerpt: `${title} from ${SEO_OWNER_NAME}: practical methods for better short-form storytelling and retention-driven edits.`,
+        primaryKeyword: title.toLowerCase(),
+        secondaryKeywords: ['video editing tips', 'instagram reels strategy', 'retention editing guide'],
+        intro: `${title} explains practical editing tactics used in real client and creator projects.`,
+        sections: [
+            {
+                heading: 'Key principle',
+                body: 'Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior.'
+            },
+            {
+                heading: 'Execution checklist',
+                body: 'Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off.'
+            }
+        ],
+        faqs: baseFaqs,
+        relatedProjectSlugs: projectSlugs.slice(index, index + 2),
+        heroImage: projects[index % Math.max(1, projects.length)]?.image || '',
+        publishedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        indexable: true
+    }));
+};
+
+const ensureSeoHubContent = (content) => {
+    if (!content || typeof content !== 'object') return { content, changed: false };
+
+    const nextContent = content;
+    const seo = nextContent.seo && typeof nextContent.seo === 'object' ? { ...nextContent.seo } : {};
+    const hubTypes = Object.keys(SEO_HUB_ROUTE_CONFIG);
+    let changed = !nextContent.seo || typeof nextContent.seo !== 'object';
+
+    const ensureHubList = (type) => {
+        const fromDb = Array.isArray(seo[type]) ? seo[type] : [];
+        if (!Array.isArray(seo[type])) changed = true;
+        const source = fromDb.length > 0 ? fromDb : buildDefaultSeoHubEntries(nextContent, type);
+        if (fromDb.length === 0 && source.length > 0) changed = true;
+
+        const used = new Set();
+        const normalized = source.map((entry, index) => {
+            const safe = entry && typeof entry === 'object' ? entry : {};
+            const title = sanitizeString(safe.title || `${SEO_HUB_ROUTE_CONFIG[type].singular} ${index + 1}`, 140);
+            let slug = isValidSlug(safe.slug) ? safe.slug : slugify(safe.slug || title || `${type}-${index + 1}`);
+            if (!slug) slug = `${type}-${index + 1}`;
+            while (used.has(slug)) slug = `${slug}-${index + 1}`;
+            used.add(slug);
+
+            const normalizedEntry = {
+                id: sanitizeString(safe.id || `${type}-${slug}`, 120),
+                slug,
+                title,
+                excerpt: sanitizeString(safe.excerpt || '', 220),
+                primaryKeyword: sanitizeString(safe.primaryKeyword || '', 120),
+                secondaryKeywords: Array.isArray(safe.secondaryKeywords)
+                    ? safe.secondaryKeywords.map((value) => sanitizeString(value, 120)).filter(Boolean).slice(0, 20)
+                    : [],
+                intro: sanitizeString(safe.intro || '', 450),
+                sections: Array.isArray(safe.sections)
+                    ? safe.sections
+                        .map((section) => {
+                            if (!section || typeof section !== 'object') return null;
+                            const heading = sanitizeString(section.heading || '', 120);
+                            const body = sanitizeString(section.body || '', 1200);
+                            if (!heading || !body) return null;
+                            return { heading, body };
+                        })
+                        .filter(Boolean)
+                        .slice(0, 14)
+                    : [],
+                faqs: sanitizeSeoFaqItems(safe.faqs),
+                relatedProjectSlugs: Array.isArray(safe.relatedProjectSlugs)
+                    ? safe.relatedProjectSlugs.map((value) => slugify(value, { maxLength: 80 })).filter(Boolean).slice(0, 20)
+                    : [],
+                heroImage: sanitizeString(safe.heroImage || '', 600),
+                publishedAt: sanitizeString(safe.publishedAt || '', 60),
+                updatedAt: sanitizeString(safe.updatedAt || '', 60),
+                indexable: safe.indexable !== false
+            };
+
+            if (JSON.stringify(normalizedEntry) !== JSON.stringify(safe)) {
+                changed = true;
+            }
+
+            return normalizedEntry;
+        });
+
+        seo[type] = normalized;
+    };
+
+    for (const type of hubTypes) {
+        ensureHubList(type);
+    }
+
+    const defaultFaqs = [
+        { q: 'Do you edit Instagram Reels?', a: 'Yes, with retention-focused pacing, hook clarity, and social-first storytelling.' },
+        { q: 'Are remote projects supported?', a: 'Yes. Projects are handled remotely with streamlined review and feedback cycles.' },
+        { q: 'Can I request revisions?', a: 'Yes. Revision rounds are available based on scope and project agreement.' }
+    ];
+    const normalizedFaqs = sanitizeSeoFaqItems(seo.faqs);
+    const finalFaqs = normalizedFaqs.length > 0 ? normalizedFaqs : defaultFaqs;
+    if (!Array.isArray(seo.faqs) || JSON.stringify(finalFaqs) !== JSON.stringify(seo.faqs)) {
+        seo.faqs = finalFaqs;
+        changed = true;
+    }
+
+    if (changed) {
+        nextContent.seo = seo;
+    }
+
+    return { content: nextContent, changed };
+};
+
 const normalizePublicSiteUrl = (value) => {
     const raw = sanitizeString(String(value || ''), 300);
     if (!raw) return '';
@@ -202,6 +426,10 @@ const SEO_SITE_NAME = sanitizeString(process.env.SEO_SITE_NAME || `${SEO_BRAND_N
 const SEO_LOCATION = sanitizeString(process.env.SEO_LOCATION || 'Surat, Gujarat, India', 140);
 const SEO_DEFAULT_INSTAGRAM_URL = sanitizeString(process.env.SEO_INSTAGRAM_URL || 'https://www.instagram.com/_thecoco_club/', 260);
 const SEO_DEFAULT_IMAGE_PATH = sanitizeString(process.env.SEO_DEFAULT_IMAGE || '/my-logo-circle.png', 260) || '/my-logo-circle.png';
+const SEO_PRIMARY_BRAND_ROUTE = sanitizeString(process.env.SEO_PRIMARY_BRAND_ROUTE || '/', 80) || '/';
+const SEO_INDEX_REELS = String(process.env.SEO_INDEX_REELS || 'true').trim().toLowerCase() !== 'false';
+const SEO_ENABLE_CONTENT_HUB = String(process.env.SEO_ENABLE_CONTENT_HUB || 'true').trim().toLowerCase() !== 'false';
+const SEO_ENABLE_BREADCRUMB_SCHEMA = String(process.env.SEO_ENABLE_BREADCRUMB_SCHEMA || 'true').trim().toLowerCase() !== 'false';
 const SEO_DEFAULT_KEYWORDS = [
     'Mishwa Zalavadiya video editor portfolio',
     'Mishwa Zalavadiya portfolio',
@@ -245,6 +473,29 @@ const SEO_LANDING_PAGES = Object.freeze({
             'video editor gujarat',
             'instagram video editor surat'
         ]
+    }
+});
+const SEO_HUB_ROUTE_CONFIG = Object.freeze({
+    services: {
+        path: '/services',
+        singular: 'service',
+        title: `${SEO_OWNER_NAME} Video Editing Services | ${SEO_LOCATION}`,
+        description: `${SEO_OWNER_NAME} offers premium video editing services for high-retention Reels, brand content, and cinematic storytelling in ${SEO_LOCATION}.`,
+        keywords: ['video editing services', 'instagram reels editing service', 'surat video editor services']
+    },
+    caseStudies: {
+        path: '/case-studies',
+        singular: 'case study',
+        title: `${SEO_OWNER_NAME} Video Editing Case Studies | ${SEO_LOCATION}`,
+        description: `Explore measurable editing outcomes, creative strategy, and project breakdowns from ${SEO_OWNER_NAME}'s video editing case studies.`,
+        keywords: ['video editing case studies', 'instagram reel case study', 'video editor project breakdown']
+    },
+    guides: {
+        path: '/guides',
+        singular: 'guide',
+        title: `${SEO_OWNER_NAME} Video Editing Guides | ${SEO_LOCATION}`,
+        description: `Practical guides from ${SEO_OWNER_NAME} on retention-focused reels, cinematic storytelling, hooks, pacing, and edit structure.`,
+        keywords: ['video editing guide', 'instagram reels strategy guide', 'retention editing tips']
     }
 });
 const SEO_AI_BOT_ALLOWLIST = ['GPTBot', 'OAI-SearchBot', 'Google-Extended', 'ClaudeBot', 'PerplexityBot', 'CCBot'];
@@ -1046,7 +1297,8 @@ const initializeDB = () => {
     if (!db.content || typeof db.content !== 'object') db.content = {};
     const slugResult = ensureProjectSlugs(db.content);
     const seoResult = ensureProjectSeoFields(slugResult.content);
-    db.content = seoResult.content;
+    const seoHubResult = ensureSeoHubContent(seoResult.content);
+    db.content = seoHubResult.content;
     if (!db.content.social || typeof db.content.social !== 'object') db.content.social = {};
     if (!sanitizeString(db.content.social.instagram || '', 260)) {
         db.content.social.instagram = SEO_DEFAULT_INSTAGRAM_URL;
@@ -1929,51 +2181,145 @@ app.get('/api/content', (req, res) => {
     }
 });
 
-// Sitemap.xml for SEO
+const getSeoHubEntries = (content, type) => {
+    if (!SEO_ENABLE_CONTENT_HUB) return [];
+    const raw = Array.isArray(content?.seo?.[type]) ? content.seo[type] : [];
+    return raw
+        .filter((entry) => entry && typeof entry === 'object')
+        .filter((entry) => entry.indexable !== false)
+        .filter((entry) => isValidSlug(String(entry.slug || '')));
+};
+
+const buildSitemapUrlSetXml = (entries, baseUrl, lastmod) => {
+    const body = entries.map((entry) => {
+        const loc = entry.path === '/' ? baseUrl : `${baseUrl}${entry.path}`;
+        return `  <url>
+    <loc>${escapeHtml(loc)}</loc>
+    <lastmod>${escapeHtml(lastmod)}</lastmod>
+    <changefreq>${entry.changefreq}</changefreq>
+    <priority>${entry.priority}</priority>
+  </url>`;
+    }).join('\n');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>`;
+};
+
+const SITEMAP_SEGMENT_FILES = Object.freeze({
+    pages: 'pages',
+    projects: 'projects',
+    services: 'services',
+    caseStudies: 'case-studies',
+    guides: 'guides'
+});
+
+const resolveSitemapSegmentKey = (segment) => {
+    const normalized = sanitizeString(segment || '', 50);
+    if (!normalized) return '';
+    const direct = Object.keys(SITEMAP_SEGMENT_FILES).find((key) => key.toLowerCase() === normalized.toLowerCase());
+    if (direct) return direct;
+    const byFileName = Object.entries(SITEMAP_SEGMENT_FILES).find(([, fileName]) => fileName.toLowerCase() === normalized.toLowerCase());
+    return byFileName ? byFileName[0] : '';
+};
+
+const getSitemapRouteGroups = (db) => {
+    const pageRoutes = [
+        { path: '/', changefreq: 'weekly', priority: '1.0' },
+        ...(SEO_INDEX_REELS ? [{ path: '/reels', changefreq: 'weekly', priority: '0.85' }] : []),
+        { path: '/site-map', changefreq: 'weekly', priority: '0.6' },
+        ...Object.keys(SEO_LANDING_PAGES).map((pathName) => ({ path: pathName, changefreq: 'weekly', priority: '0.8' })),
+        ...(SEO_ENABLE_CONTENT_HUB
+            ? [
+                { path: '/services', changefreq: 'weekly', priority: '0.72' },
+                { path: '/case-studies', changefreq: 'weekly', priority: '0.72' },
+                { path: '/guides', changefreq: 'weekly', priority: '0.72' }
+            ]
+            : [])
+    ];
+
+    const projectRoutes = [];
+    const seenProjectSlugs = new Set();
+    if (Array.isArray(db.content?.projects)) {
+        for (const project of db.content.projects) {
+            const slug = project?.slug && isValidSlug(project.slug) ? project.slug : slugify(project?.title || project?.id || '');
+            if (!slug || seenProjectSlugs.has(slug)) continue;
+            seenProjectSlugs.add(slug);
+            projectRoutes.push({ path: `/project/${slug}`, changefreq: 'monthly', priority: '0.7' });
+        }
+    }
+
+    const toRoutes = (type) => getSeoHubEntries(db.content, type).map((entry) => ({
+        path: `${SEO_HUB_ROUTE_CONFIG[type].path}/${entry.slug}`,
+        changefreq: 'monthly',
+        priority: type === 'services' ? '0.68' : '0.64'
+    }));
+
+    return {
+        pages: pageRoutes,
+        projects: projectRoutes,
+        services: toRoutes('services'),
+        caseStudies: toRoutes('caseStudies'),
+        guides: toRoutes('guides')
+    };
+};
+
+// Sitemap index for SEO
 app.get('/sitemap.xml', (req, res) => {
     try {
         const db = readDB();
         const baseUrl = getPreferredPublicBaseUrl(req);
         const lastmod = String(db.contentHistory?.[0]?.timestamp || new Date().toISOString()).split('T')[0];
+        const groups = getSitemapRouteGroups(db);
 
-        const staticRoutes = [
-            { path: '/', changefreq: 'weekly', priority: '1.0' },
-            { path: '/reels', changefreq: 'weekly', priority: '0.9' },
-            ...Object.keys(SEO_LANDING_PAGES).map((pathName) => ({ path: pathName, changefreq: 'weekly', priority: '0.8' }))
-        ];
-
-        const projectRoutes = [];
-        const seenProjectSlugs = new Set();
-        if (Array.isArray(db.content?.projects)) {
-            for (const project of db.content.projects) {
-                const slug = project?.slug && isValidSlug(project.slug) ? project.slug : slugify(project?.title || project?.id || '');
-                if (!slug || seenProjectSlugs.has(slug)) continue;
-                seenProjectSlugs.add(slug);
-                projectRoutes.push({ path: `/project/${slug}`, changefreq: 'monthly', priority: '0.7' });
-            }
-        }
-
-        const allRoutes = [...staticRoutes, ...projectRoutes];
-        const xmlBody = allRoutes.map((route) => {
-            const loc = route.path === '/' ? baseUrl : `${baseUrl}${route.path}`;
-            return `  <url>
-    <loc>${escapeHtml(loc)}</loc>
-    <lastmod>${lastmod}</lastmod>
-    <changefreq>${route.changefreq}</changefreq>
-    <priority>${route.priority}</priority>
-  </url>`;
-        }).join('\n');
+        const indexRows = Object.entries(groups)
+            .filter(([, entries]) => Array.isArray(entries) && entries.length > 0)
+            .map(([segment]) => {
+                const fileName = SITEMAP_SEGMENT_FILES[segment] || segment;
+                return `  <sitemap>
+    <loc>${escapeHtml(`${baseUrl}/sitemaps/${fileName}.xml`)}</loc>
+    <lastmod>${escapeHtml(lastmod)}</lastmod>
+  </sitemap>`;
+            })
+            .join('\n');
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${xmlBody}
-</urlset>`;
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${indexRows}
+</sitemapindex>`;
 
         res.setHeader('Content-Type', 'application/xml');
         res.send(xml);
     } catch (error) {
-        console.error('Sitemap generation error:', error);
-        res.status(500).send('Error generating sitemap');
+        console.error('Sitemap index generation error:', error);
+        res.status(500).send('Error generating sitemap index');
+    }
+});
+
+app.get('/sitemaps/:segment.xml', (req, res) => {
+    try {
+        const db = readDB();
+        const baseUrl = getPreferredPublicBaseUrl(req);
+        const lastmod = String(db.contentHistory?.[0]?.timestamp || new Date().toISOString()).split('T')[0];
+        const groups = getSitemapRouteGroups(db);
+        const segment = resolveSitemapSegmentKey(req.params.segment || '');
+
+        if (!segment || !Object.prototype.hasOwnProperty.call(groups, segment)) {
+            return res.status(404).send('Sitemap segment not found');
+        }
+
+        const entries = groups[segment];
+        if (!Array.isArray(entries) || entries.length === 0) {
+            return res.status(404).send('Sitemap segment empty');
+        }
+
+        const xml = buildSitemapUrlSetXml(entries, baseUrl, lastmod);
+        res.setHeader('Content-Type', 'application/xml');
+        return res.send(xml);
+    } catch (error) {
+        console.error('Sitemap segment generation error:', error);
+        return res.status(500).send('Error generating sitemap segment');
     }
 });
 
@@ -1992,12 +2338,52 @@ Disallow: /admin/
 Disallow: /api/
 
 ${aiBotDirectives}
-Host: ${baseUrl}
 Sitemap: ${baseUrl}/sitemap.xml
 # AI context: ${baseUrl}/llms.txt
 `;
     res.setHeader('Content-Type', 'text/plain');
     res.send(robotsTxt);
+});
+
+app.get('/api/seo/health', (req, res) => {
+    try {
+        const db = readDB();
+        const baseUrl = getPreferredPublicBaseUrl(req);
+        const groups = getSitemapRouteGroups(db);
+        const content = db.content || {};
+        const hubCounts = {
+            services: getSeoHubEntries(content, 'services').length,
+            caseStudies: getSeoHubEntries(content, 'caseStudies').length,
+            guides: getSeoHubEntries(content, 'guides').length
+        };
+
+        const payload = {
+            status: 'ok',
+            canonicalBaseUrl: baseUrl,
+            config: {
+                primaryBrandRoute: SEO_PRIMARY_BRAND_ROUTE,
+                indexReels: SEO_INDEX_REELS,
+                contentHubEnabled: SEO_ENABLE_CONTENT_HUB,
+                breadcrumbSchemaEnabled: SEO_ENABLE_BREADCRUMB_SCHEMA
+            },
+            counts: {
+                sitemap: Object.fromEntries(Object.entries(groups).map(([key, routes]) => [key, routes.length])),
+                projects: Array.isArray(content.projects) ? content.projects.length : 0,
+                hub: hubCounts
+            },
+            checks: {
+                hasPersonSchema: true,
+                hasWebsiteSchema: true,
+                hasProfessionalServiceSchema: true,
+                hasCustom404: true
+            }
+        };
+
+        res.json(payload);
+    } catch (error) {
+        reportServerError('SEO Health Error', error, req);
+        res.status(500).json({ status: 'error', error: 'Failed to build SEO health report.' });
+    }
 });
 
 // Update Content
@@ -2066,7 +2452,8 @@ app.post('/api/content', validateAdminToken, (req, res) => {
 
         const slugResult = ensureProjectSlugs(content);
         const seoResult = ensureProjectSeoFields(slugResult.content);
-        db.content = { ...db.content, ...seoResult.content };
+        const seoHubResult = ensureSeoHubContent(seoResult.content);
+        db.content = { ...db.content, ...seoHubResult.content };
         writeDB(db);
         logNotification('info', 'Content Updated', `Website content was modified via CMS from ${ip}`, ip);
         res.json({ success: true, content: db.content });
@@ -2120,7 +2507,8 @@ app.post('/api/content/history/:id/rollback', validateAdminToken, (req, res) => 
         const restored = JSON.parse(JSON.stringify(target.content));
         const slugResult = ensureProjectSlugs(restored);
         const seoResult = ensureProjectSeoFields(slugResult.content);
-        db.content = seoResult.content;
+        const seoHubResult = ensureSeoHubContent(seoResult.content);
+        db.content = seoHubResult.content;
         if (!db.content.social || typeof db.content.social !== 'object') db.content.social = {};
         if (!sanitizeString(db.content.social.instagram || '', 260)) {
             db.content.social.instagram = SEO_DEFAULT_INSTAGRAM_URL;
@@ -2999,6 +3387,7 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     const normalizedPath = pathName && pathName !== '/' ? String(pathName).replace(/\/+$/, '') : '/';
     const canonical = normalizedPath === '/' ? safeBase : `${safeBase}${normalizedPath}`;
     const ogFallbackImage = resolveAbsoluteUrl(safeBase, SEO_DEFAULT_IMAGE_PATH) || `${safeBase}/images/mishwa_portrait.png`;
+    const brandLogo = resolveAbsoluteUrl(safeBase, SEO_DEFAULT_IMAGE_PATH) || ogFallbackImage;
 
     const name = SEO_BRAND_NAME || 'Mishwa';
     const ownerName = SEO_OWNER_NAME || name;
@@ -3013,6 +3402,13 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
         socials.twitter
     ].filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim())));
     const twitterSite = parseTwitterHandle(process.env.SEO_TWITTER_HANDLE || socials.twitter);
+    const hubContent = content?.seo || {};
+    const hubEntries = {
+        services: getSeoHubEntries(content, 'services'),
+        caseStudies: getSeoHubEntries(content, 'caseStudies'),
+        guides: getSeoHubEntries(content, 'guides')
+    };
+    const sharedFaqs = sanitizeSeoFaqItems(hubContent?.faqs || []);
 
     const dedupeKeywords = (...groups) => {
         const entries = groups.flatMap((group) => {
@@ -3042,10 +3438,38 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
         image = ogFallbackImage,
         imageAlt = `${ownerName} portfolio logo`,
         jsonLd = [],
-        canonicalUrl = canonical
+        canonicalUrl = canonical,
+        breadcrumbs = [],
+        faqItems = []
     }) => {
         const resolvedImage = resolveAbsoluteUrl(safeBase, image) || ogFallbackImage;
         const mergedKeywords = dedupeKeywords(SEO_DEFAULT_KEYWORDS, keywords);
+        const breadcrumbJsonLd = SEO_ENABLE_BREADCRUMB_SCHEMA && Array.isArray(breadcrumbs) && breadcrumbs.length > 1
+            ? [{
+                '@context': 'https://schema.org',
+                '@type': 'BreadcrumbList',
+                itemListElement: breadcrumbs.map((crumb, index) => ({
+                    '@type': 'ListItem',
+                    position: index + 1,
+                    name: crumb.name,
+                    item: crumb.url
+                }))
+            }]
+            : [];
+        const faqJsonLd = Array.isArray(faqItems) && faqItems.length > 0
+            ? [{
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: faqItems.map((faq) => ({
+                    '@type': 'Question',
+                    name: faq.q,
+                    acceptedAnswer: {
+                        '@type': 'Answer',
+                        text: faq.a
+                    }
+                }))
+            }]
+            : [];
         return {
             statusCode,
             title,
@@ -3077,7 +3501,7 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
                 position: '21.1702;72.8311',
                 region: 'IN-GJ'
             },
-            jsonLd
+            jsonLd: [...(Array.isArray(jsonLd) ? jsonLd : []), ...breadcrumbJsonLd, ...faqJsonLd]
         };
     };
 
@@ -3102,6 +3526,34 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
             name: siteName,
             url: safeBase || undefined,
             inLanguage: 'en-IN'
+        },
+        {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            '@id': `${safeBase}#organization`,
+            name: siteName,
+            url: safeBase || undefined,
+            logo: brandLogo,
+            sameAs
+        },
+        {
+            '@context': 'https://schema.org',
+            '@type': 'ProfessionalService',
+            '@id': `${safeBase}#service`,
+            name: `${ownerName} Video Editing Services`,
+            url: safeBase || undefined,
+            image: brandLogo,
+            areaServed: {
+                '@type': 'City',
+                name: 'Surat'
+            },
+            address: {
+                '@type': 'PostalAddress',
+                addressLocality: 'Surat',
+                addressRegion: 'Gujarat',
+                addressCountry: 'IN'
+            },
+            sameAs
         }
     ];
 
@@ -3122,6 +3574,11 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
             title: landingPage.title,
             description: landingPage.description,
             keywords: landingPage.keywords,
+            breadcrumbs: [
+                { name: 'Home', url: safeBase },
+                { name: landingPage.title, url: canonical }
+            ],
+            faqItems: sharedFaqs.slice(0, 5),
             jsonLd: [
                 ...baseJsonLd,
                 {
@@ -3138,8 +3595,8 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     }
 
     if (normalizedPath === '/reels') {
-        const title = `Archives | ${ownerName} Video Editor Portfolio`;
-        const description = `${ownerName}'s reel archives: high-retention Instagram Reels, edits by category, and cinematic storytelling work.`;
+        const title = `Reel Archives | ${ownerName} Edits`;
+        const description = `Browse reel archives by category: high-retention Instagram edits, cinematic storytelling, and social-first projects from ${ownerName}.`;
         const projects = Array.isArray(content?.projects) ? content.projects : [];
         const topItems = projects.slice(0, 10).map((project, index) => ({
             '@type': 'ListItem',
@@ -3151,7 +3608,12 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
         return buildSeoPayload({
             title,
             description,
+            robots: SEO_INDEX_REELS ? 'index,follow' : 'noindex,nofollow',
             keywords: ['mishwa reels archive', 'instagram reels portfolio', 'video editing projects', 'short form editor'],
+            breadcrumbs: [
+                { name: 'Home', url: safeBase },
+                { name: 'Reel Archives', url: canonical }
+            ],
             jsonLd: [
                 ...baseJsonLd,
                 {
@@ -3168,6 +3630,118 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
                 }
             ]
         });
+    }
+
+    if (SEO_ENABLE_CONTENT_HUB) {
+        const findHubEntry = (type, slug) => hubEntries[type].find((entry) => String(entry.slug || '').toLowerCase() === slug);
+        const hubPathMap = {
+            '/services': 'services',
+            '/case-studies': 'caseStudies',
+            '/guides': 'guides'
+        };
+
+        if (Object.prototype.hasOwnProperty.call(hubPathMap, normalizedPath)) {
+            const type = hubPathMap[normalizedPath];
+            const config = SEO_HUB_ROUTE_CONFIG[type];
+            const items = hubEntries[type];
+            return buildSeoPayload({
+                title: config.title,
+                description: config.description,
+                keywords: config.keywords,
+                breadcrumbs: [
+                    { name: 'Home', url: safeBase },
+                    { name: config.singular === 'service' ? 'Services' : config.singular === 'case study' ? 'Case Studies' : 'Guides', url: canonical }
+                ],
+                faqItems: sharedFaqs.slice(0, 6),
+                jsonLd: [
+                    ...baseJsonLd,
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': 'CollectionPage',
+                        name: config.title,
+                        description: config.description,
+                        url: canonical,
+                        hasPart: {
+                            '@type': 'ItemList',
+                            itemListElement: items.slice(0, 30).map((item, index) => ({
+                                '@type': 'ListItem',
+                                position: index + 1,
+                                name: item.title,
+                                url: `${safeBase}${config.path}/${item.slug}`
+                            }))
+                        }
+                    }
+                ]
+            });
+        }
+
+        const contentMatch = normalizedPath.match(/^\/(services|case-studies|guides)\/([^/]+)$/);
+        if (contentMatch) {
+            const routePrefix = `/${contentMatch[1]}`;
+            const slug = decodeURIComponent(contentMatch[2] || '').trim().toLowerCase();
+            const type = routePrefix === '/services'
+                ? 'services'
+                : routePrefix === '/case-studies'
+                    ? 'caseStudies'
+                    : 'guides';
+            const config = SEO_HUB_ROUTE_CONFIG[type];
+            const entry = findHubEntry(type, slug);
+
+            if (!entry || entry.indexable === false) {
+                return buildSeoPayload({
+                    statusCode: 404,
+                    title: `Content Not Found | ${siteName}`,
+                    description: `The requested ${config.singular} is unavailable.`,
+                    robots: 'noindex,nofollow',
+                    breadcrumbs: [
+                        { name: 'Home', url: safeBase },
+                        { name: routePrefix.slice(1), url: `${safeBase}${routePrefix}` }
+                    ],
+                    jsonLd: baseJsonLd
+                });
+            }
+
+            const entryTitle = sanitizeString(entry.title || `${config.singular} by ${ownerName}`, 140);
+            const entryDescription = sanitizeString(
+                entry.excerpt || entry.intro || `${entryTitle} by ${ownerName}, ${location}-based video editor.`,
+                180
+            );
+            const entryUrl = `${safeBase}${config.path}/${entry.slug}`;
+            const entryImage = resolveAbsoluteUrl(safeBase, entry.heroImage) || ogFallbackImage;
+            const faqItems = sanitizeSeoFaqItems(entry.faqs).slice(0, 8);
+
+            return buildSeoPayload({
+                title: `${entryTitle} | ${ownerName}`,
+                description: entryDescription,
+                canonicalUrl: entryUrl,
+                image: entryImage,
+                keywords: [entry.primaryKeyword, ...(entry.secondaryKeywords || []), `${ownerName} ${config.singular}`],
+                breadcrumbs: [
+                    { name: 'Home', url: safeBase },
+                    {
+                        name: routePrefix === '/services' ? 'Services' : routePrefix === '/case-studies' ? 'Case Studies' : 'Guides',
+                        url: `${safeBase}${routePrefix}`
+                    },
+                    { name: entryTitle, url: entryUrl }
+                ],
+                faqItems,
+                jsonLd: [
+                    ...baseJsonLd,
+                    {
+                        '@context': 'https://schema.org',
+                        '@type': type === 'guides' ? 'Article' : 'CreativeWork',
+                        name: entryTitle,
+                        description: entryDescription,
+                        url: entryUrl,
+                        image: entryImage,
+                        author: { '@id': `${safeBase}#person` },
+                        publisher: { '@id': `${safeBase}#organization` },
+                        datePublished: entry.publishedAt || undefined,
+                        dateModified: entry.updatedAt || entry.publishedAt || undefined
+                    }
+                ]
+            });
+        }
     }
 
     const projectMatch = normalizedPath.match(/^\/project\/([^/]+)$/);
@@ -3208,6 +3782,11 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
             image,
             imageAlt: `${projTitle} by ${ownerName}`,
             keywords: [projTitle, category, `${ownerName} portfolio`, 'video editor reel', 'cinematic reel edit'],
+            breadcrumbs: [
+                { name: 'Home', url: safeBase },
+                { name: 'Reel Archives', url: `${safeBase}/reels` },
+                { name: projTitle, url }
+            ],
             jsonLd: [
                 ...baseJsonLd,
                 {
@@ -3220,6 +3799,29 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
                     image,
                     genre: category || undefined,
                     creator: { '@id': `${safeBase}#person` }
+                }
+            ]
+        });
+    }
+
+    if (normalizedPath === '/site-map') {
+        const description = `Browse all key pages from ${siteName}, including portfolio projects, guides, services, and case studies.`;
+        return buildSeoPayload({
+            title: `Site Map | ${siteName}`,
+            description,
+            keywords: ['site map', `${ownerName} pages`, 'portfolio pages'],
+            breadcrumbs: [
+                { name: 'Home', url: safeBase },
+                { name: 'Site Map', url: canonical }
+            ],
+            jsonLd: [
+                ...baseJsonLd,
+                {
+                    '@context': 'https://schema.org',
+                    '@type': 'WebPage',
+                    name: `Site Map | ${siteName}`,
+                    url: canonical,
+                    description
                 }
             ]
         });
@@ -3238,10 +3840,12 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
         });
     }
 
-    const title = `${ownerName} | Surat Video Editor Portfolio`;
+    const homeTitle = SEO_PRIMARY_BRAND_ROUTE === '/'
+        ? `${ownerName} - Video Editor in Surat | Official Portfolio`
+        : `${ownerName} | Surat Video Editor Portfolio`;
     const description = `${ownerName} is a Surat-based video editor and visual artist specializing in high-retention Instagram Reels, cinematic brand storytelling, and portfolio edits built for measurable audience growth.`;
     return buildSeoPayload({
-        title,
+        title: homeTitle,
         description,
         keywords: [
             'mishwa zalavadiya portfolio',
@@ -3250,12 +3854,14 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
             'high retention reel editor',
             'cinematic storytelling editor'
         ],
+        breadcrumbs: [{ name: 'Home', url: safeBase }],
+        faqItems: sharedFaqs.slice(0, 6),
         jsonLd: [
             ...baseJsonLd,
             {
                 '@context': 'https://schema.org',
                 '@type': 'WebPage',
-                name: title,
+                name: homeTitle,
                 url: canonical,
                 description,
                 isPartOf: { '@id': `${safeBase}#website` },
@@ -3350,7 +3956,12 @@ const renderSeoMetaBlock = (seo, nonce, { includeAnalytics = false } = {}) => {
         ? seo.keywords.join(', ')
         : SEO_DEFAULT_KEYWORDS.join(', ');
     const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
-    const jsonLd = Array.isArray(seo.jsonLd) && seo.jsonLd.length > 0 ? JSON.stringify(seo.jsonLd) : '';
+    const jsonLdBlocks = Array.isArray(seo.jsonLd) && seo.jsonLd.length > 0
+        ? seo.jsonLd
+            .filter((entry) => entry && typeof entry === 'object')
+            .map((entry) => `<script type="application/ld+json"${safeNonce}>${JSON.stringify(entry)}</script>`)
+            .join('\n')
+        : '';
     const analyticsBlock = renderAnalyticsHeadBlock(nonce, includeAnalytics);
     const tags = [
         '<!--__SEO_START__-->',
@@ -3382,7 +3993,7 @@ const renderSeoMetaBlock = (seo, nonce, { includeAnalytics = false } = {}) => {
         '<meta name="twitter:description" content="' + escapeHtml(seo.twitter?.description || seo.description || '') + '" />',
         '<meta name="twitter:image" content="' + escapeHtml(seo.twitter?.image || '') + '" />',
         '<meta name="twitter:image:alt" content="' + escapeHtml(seo.twitter?.imageAlt || `${SEO_OWNER_NAME} portfolio logo`) + '" />',
-        jsonLd ? `<script type="application/ld+json"${safeNonce}>${jsonLd}</script>` : '',
+        jsonLdBlocks,
         analyticsBlock,
         '<!--__SEO_END__-->'
     ];

@@ -7,6 +7,7 @@ import { useContent } from '../context/ContentContext';
 import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
 import { resolveImageSources } from '../utils/imageUtils';
+import { getSeoHubSummary } from '../utils/seoHub';
 
 const Project = () => {
   const { slug } = useParams();
@@ -31,6 +32,24 @@ const Project = () => {
     const rest = projects.filter((p) => p?.id !== project.id && (!p?.category || p.category !== project.category));
     return [...sameCategory, ...rest].slice(0, 6);
   }, [content?.projects, project]);
+
+  const relatedHubEntries = useMemo(() => {
+    if (!project) return [];
+    const normalizedSlug = String(project.slug || '').trim();
+    if (!normalizedSlug) return [];
+    return getSeoHubSummary(content)
+      .flatMap((group) =>
+        group.entries
+          .filter((entry) => Array.isArray(entry.relatedProjectSlugs) && entry.relatedProjectSlugs.includes(normalizedSlug))
+          .slice(0, 4)
+          .map((entry) => ({
+            ...entry,
+            groupLabel: group.label,
+            path: `${group.path}/${entry.slug}`
+          }))
+      )
+      .slice(0, 6);
+  }, [content, project]);
 
   if (!content) return null;
   const { optimizedSrc: projectImageSrc, webpSrc: projectImageWebp } = resolveImageSources(project?.image || '');
@@ -180,6 +199,27 @@ const Project = () => {
                 </Link>
                 );
               })}
+            </div>
+          </section>
+        )}
+
+        {relatedHubEntries.length > 0 && (
+          <section className="mt-14">
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-6">Related Insights<span className="text-secondary">.</span></h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {relatedHubEntries.map((entry) => (
+                <Link
+                  key={`${entry.path}`}
+                  to={entry.path}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors px-5 py-4"
+                >
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-secondary font-bold mb-2">{entry.groupLabel}</p>
+                  <p className="text-lg font-semibold text-white leading-tight">{entry.title}</p>
+                  {(entry.excerpt || entry.primaryKeyword) && (
+                    <p className="text-sm text-gray-400 mt-2">{entry.excerpt || entry.primaryKeyword}</p>
+                  )}
+                </Link>
+              ))}
             </div>
           </section>
         )}

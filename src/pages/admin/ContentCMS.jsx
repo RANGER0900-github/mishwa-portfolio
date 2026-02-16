@@ -35,6 +35,16 @@ const toSeoDescription = (title, category) => {
     return `${safeTitle} is a ${safeCategory.toLowerCase()} edit by Mishwa Zalavadiya, a Surat-based video editor focused on retention-first storytelling.`.slice(0, 180);
 };
 
+const normalizeSeoHub = (seo) => {
+    const safe = seo && typeof seo === 'object' ? seo : {};
+    return {
+        services: Array.isArray(safe.services) ? safe.services : [],
+        caseStudies: Array.isArray(safe.caseStudies) ? safe.caseStudies : [],
+        guides: Array.isArray(safe.guides) ? safe.guides : [],
+        faqs: Array.isArray(safe.faqs) ? safe.faqs : []
+    };
+};
+
 const ContentCMS = () => {
     const { content, updateContent } = useContent();
     const [localContent, setLocalContent] = useState(null);
@@ -51,6 +61,12 @@ const ContentCMS = () => {
     const fileInputRef = useRef(null);
     const [currentUploadTarget, setCurrentUploadTarget] = useState({ type: null, id: null });
     const saveButtonRef = useRef(null);
+    const [seoDrafts, setSeoDrafts] = useState({
+        services: '[]',
+        caseStudies: '[]',
+        guides: '[]',
+        faqs: '[]'
+    });
     const getUploadKey = (type, id = null) => `${type || 'global'}-${id ?? 'global'}`;
 
     useEffect(() => {
@@ -62,11 +78,23 @@ const ContentCMS = () => {
                 reviews: content.reviews || [],
                 footer: content.footer || { copyright: '', showSocial: true },
                 archiveCategories: content.archiveCategories || DEFAULT_ARCHIVE_CATEGORIES,
-                cinema: content.cinema || { title: '', subtitle: '', items: [] }
+                cinema: content.cinema || { title: '', subtitle: '', items: [] },
+                seo: normalizeSeoHub(content.seo)
             });
             setShowSaveButton(false);
         }
     }, [content, localContent]);
+
+    useEffect(() => {
+        if (!localContent) return;
+        const seo = normalizeSeoHub(localContent.seo);
+        setSeoDrafts({
+            services: JSON.stringify(seo.services, null, 2),
+            caseStudies: JSON.stringify(seo.caseStudies, null, 2),
+            guides: JSON.stringify(seo.guides, null, 2),
+            faqs: JSON.stringify(seo.faqs, null, 2)
+        });
+    }, [localContent?.seo]);
 
     useEffect(() => {
         if (activeTab === 'history') {
@@ -99,6 +127,28 @@ const ContentCMS = () => {
     const trackChange = (newContent) => {
         setLocalContent(newContent);
         setShowSaveButton(true);
+    };
+
+    const applySeoDraft = (field) => {
+        try {
+            const parsed = JSON.parse(seoDrafts[field] || '[]');
+            if (!Array.isArray(parsed)) {
+                toast.error(`${field} must be an array.`);
+                return;
+            }
+
+            const seo = normalizeSeoHub(localContent.seo);
+            trackChange({
+                ...localContent,
+                seo: {
+                    ...seo,
+                    [field]: parsed
+                }
+            });
+            toast.success(`${field} updated.`);
+        } catch {
+            toast.error(`Invalid JSON in ${field}.`);
+        }
     };
 
     const fetchHistory = async ({ force = false } = {}) => {
@@ -531,7 +581,7 @@ const ContentCMS = () => {
             </AnimatePresence>
 
             <div data-lenis-prevent className="flex sm:flex-wrap gap-2 sm:gap-3 mb-8 overflow-x-auto sm:overflow-visible pb-2">
-                {['projects', 'archive', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'footer', 'history'].map(tab => (
+                {['projects', 'archive', 'reviews', 'hero', 'cinema', 'about', 'branding', 'social', 'seo', 'footer', 'history'].map(tab => (
                     <motion.button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -990,6 +1040,46 @@ const ContentCMS = () => {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </motion.div>
+                )}
+
+                {activeTab === 'seo' && (
+                    <motion.div key="seo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-4xl">
+                        <div className="bg-[#112240]/50 p-4 sm:p-8 rounded-3xl border border-white/5 space-y-8">
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-2">SEO Content Hub</h3>
+                                <p className="text-sm text-gray-400">
+                                    Manage CMS-driven SEO clusters for <span className="text-primary">services</span>, <span className="text-primary">case studies</span>, <span className="text-primary">guides</span>, and shared <span className="text-primary">FAQs</span>.
+                                </p>
+                            </div>
+
+                            {[
+                                { key: 'services', label: 'Services Array' },
+                                { key: 'caseStudies', label: 'Case Studies Array' },
+                                { key: 'guides', label: 'Guides Array' },
+                                { key: 'faqs', label: 'Shared FAQ Array' }
+                            ].map((entry) => (
+                                <div key={entry.key} className="space-y-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500">{entry.label}</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => applySeoDraft(entry.key)}
+                                            className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                                        >
+                                            Apply {entry.key}
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        value={seoDrafts[entry.key] || '[]'}
+                                        onChange={(e) => setSeoDrafts((prev) => ({ ...prev, [entry.key]: e.target.value }))}
+                                        rows={12}
+                                        className="w-full bg-[#0a192f] border border-white/10 rounded-xl px-4 py-3 text-cyan-200 text-xs sm:text-sm font-mono focus:border-primary focus:outline-none resize-y"
+                                        placeholder="[]"
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </motion.div>
                 )}

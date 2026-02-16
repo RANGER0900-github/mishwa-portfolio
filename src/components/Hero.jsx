@@ -13,7 +13,7 @@ const Hero = () => {
     const { hero } = content;
 
     return (
-        <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-[clamp(5.5rem,9vh,7.5rem)] pb-[clamp(5rem,10vh,7.5rem)]">
             {/* Background Elements */}
             <div className="absolute inset-0 bg-background z-0">
                 {!isLite && (
@@ -24,14 +24,14 @@ const Hero = () => {
                 )}
             </div>
 
-            <div className="relative z-10 text-center px-4">
+            <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
                 <h1 className="sr-only">Mishwa Zalavadiya Video Editor Portfolio in Surat</h1>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                 >
-                    <h2 className="text-secondary font-mono text-sm md:text-base tracking-[0.2em] mb-4">{hero.subtitle}</h2>
+                    <h2 className="text-secondary font-mono text-sm md:text-base tracking-[0.22em] mb-6 leading-relaxed">{hero.subtitle}</h2>
                     <p className="text-white/70 text-sm md:text-base font-semibold tracking-wide mb-4">Mishwa Zalavadiya</p>
                 </motion.div>
 
@@ -39,7 +39,7 @@ const Hero = () => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-                    className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter text-white mb-6 will-change-transform"
+                    className="font-display text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter text-white mb-8 will-change-transform"
                     dangerouslySetInnerHTML={{ __html: hero.title.replace('.', '<span class="text-secondary">.</span>') }} // Hack to keep the dot colored if it exists
                 >
                 </motion.p>
@@ -48,7 +48,7 @@ const Hero = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 1, delay: 0.6 }}
-                    className="text-gray-400 max-w-lg mx-auto text-lg md:text-xl leading-relaxed"
+                    className="text-gray-400 max-w-2xl mx-auto text-base md:text-xl leading-relaxed"
                 >
                     {hero.description}
                 </motion.p>
@@ -57,7 +57,7 @@ const Hero = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 1 }}
-                    className="mt-12"
+                    className="mt-12 md:mt-14"
                 >
                     <a href="#work" className="group relative inline-flex items-center gap-3 px-8 py-4 bg-transparent border border-secondary/30 rounded-full overflow-hidden transition-all hover:border-secondary hover:shadow-[0_0_20px_rgba(0,243,255,0.3)]">
                         <div className="absolute inset-0 bg-secondary/10 translate-y-full transition-transform group-hover:translate-y-0 duration-300"></div>
@@ -71,7 +71,7 @@ const Hero = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 2, duration: 1 }}
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-20"
+                className="hero-scroll-indicator absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-20"
             >
                 <span className="text-xs text-gray-500 uppercase tracking-widest text-[10px]">Scroll</span>
                 <div className="w-[1px] h-8 md:h-12 bg-gradient-to-b from-secondary to-transparent"></div>

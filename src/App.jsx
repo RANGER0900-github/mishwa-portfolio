@@ -12,6 +12,9 @@ const Home = lazy(() => import('./pages/Home'));
 const AllReels = lazy(() => import('./pages/AllReels'));
 const Project = lazy(() => import('./pages/Project'));
 const SeoLanding = lazy(() => import('./pages/SeoLanding'));
+const SeoHubIndex = lazy(() => import('./pages/SeoHubIndex'));
+const SeoHubDetail = lazy(() => import('./pages/SeoHubDetail'));
+const SiteMap = lazy(() => import('./pages/SiteMap'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Login = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -211,6 +214,13 @@ const MainContent = () => {
             <Route path="/mishwa-zalavadiya-video-editor-portfolio" element={<SeoLanding />} />
             <Route path="/mishwa-zalavadiya-portfolio" element={<SeoLanding />} />
             <Route path="/surat-video-editor-portfolio" element={<SeoLanding />} />
+            <Route path="/services" element={<SeoHubIndex typeKey="services" />} />
+            <Route path="/services/:slug" element={<SeoHubDetail typeKey="services" />} />
+            <Route path="/case-studies" element={<SeoHubIndex typeKey="caseStudies" />} />
+            <Route path="/case-studies/:slug" element={<SeoHubDetail typeKey="caseStudies" />} />
+            <Route path="/guides" element={<SeoHubIndex typeKey="guides" />} />
+            <Route path="/guides/:slug" element={<SeoHubDetail typeKey="guides" />} />
+            <Route path="/site-map" element={<SiteMap />} />
 
             <Route path="/admin/login" element={<Login />} />
             <Route path="/admin" element={<AdminLayout />}>

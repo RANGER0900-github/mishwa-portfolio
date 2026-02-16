@@ -55,6 +55,10 @@ const main = async () => {
   const urls = [
     `${base}/`,
     `${base}/reels`,
+    `${base}/site-map`,
+    `${base}/services`,
+    `${base}/case-studies`,
+    `${base}/guides`,
     `${base}/mishwa-zalavadiya-video-editor-portfolio`,
     `${base}/mishwa-zalavadiya-portfolio`,
     `${base}/surat-video-editor-portfolio`,
@@ -63,8 +67,15 @@ const main = async () => {
     `${base}/does-not-exist`,
     `${base}/robots.txt`,
     `${base}/sitemap.xml`,
+    `${base}/sitemaps/pages.xml`,
+    `${base}/sitemaps/projects.xml`,
+    `${base}/sitemaps/services.xml`,
+    `${base}/sitemaps/case-studies.xml`,
+    `${base}/sitemaps/guides.xml`,
     `${base}/llms.txt`,
     `${base}/favicons/favicon-32x32.png`,
+    `${base}/favicons/favicon-48x48.png`,
+    `${base}/favicons/favicon-96x96.png`,
     `${base}/favicon.ico`
   ].filter(Boolean);
 

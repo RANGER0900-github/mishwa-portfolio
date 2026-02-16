@@ -265,7 +265,1133 @@
         "text": "She just gets the vibe immediately. No revision needed. Pure magic.",
         "image": "https://randomuser.me/api/portraits/men/85.jpg"
       }
-    ]
+    ],
+    "seo": {
+      "services": [
+        {
+          "id": "services-1",
+          "slug": "instagram-reels-editing-service",
+          "title": "Instagram Reels Editing Service",
+          "excerpt": "Instagram Reels Editing Service by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "instagram reels editing service",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers instagram reels editing service with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "glow-routines",
+            "bali-villas"
+          ],
+          "heroImage": "https://i.ytimg.com/vi/aVLwDefz5pY/maxresdefault.jpg",
+          "publishedAt": "2026-02-16T21:11:53.053Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-2",
+          "slug": "brand-storytelling-video-editing",
+          "title": "Brand Storytelling Video Editing",
+          "excerpt": "Brand Storytelling Video Editing by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "brand storytelling video editing",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers brand storytelling video editing with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "bali-villas",
+            "summer-shades"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-3",
+          "slug": "short-form-ad-creative-editing",
+          "title": "Short-Form Ad Creative Editing",
+          "excerpt": "Short-Form Ad Creative Editing by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "short-form ad creative editing",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers short-form ad creative editing with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "summer-shades",
+            "espresso-art"
+          ],
+          "heroImage": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-4",
+          "slug": "creator-content-retention-editing",
+          "title": "Creator Content Retention Editing",
+          "excerpt": "Creator Content Retention Editing by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "creator content retention editing",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers creator content retention editing with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "espresso-art",
+            "crossfit-power"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-5",
+          "slug": "cinematic-lifestyle-edit-service",
+          "title": "Cinematic Lifestyle Edit Service",
+          "excerpt": "Cinematic Lifestyle Edit Service by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "cinematic lifestyle edit service",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers cinematic lifestyle edit service with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "crossfit-power",
+            "skincare-essentials"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-6",
+          "slug": "product-reel-editing-service",
+          "title": "Product Reel Editing Service",
+          "excerpt": "Product Reel Editing Service by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "product reel editing service",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers product reel editing service with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "skincare-essentials",
+            "streetwear-2024"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-7",
+          "slug": "travel-reel-editing-service",
+          "title": "Travel Reel Editing Service",
+          "excerpt": "Travel Reel Editing Service by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "travel reel editing service",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers travel reel editing service with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "streetwear-2024",
+            "island-life"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        },
+        {
+          "id": "services-8",
+          "slug": "food-and-beverage-reel-editing-service",
+          "title": "Food & Beverage Reel Editing Service",
+          "excerpt": "Food & Beverage Reel Editing Service by Mishwa Zalavadiya for brands and creators seeking high-retention short-form video outcomes.",
+          "primaryKeyword": "food & beverage reel editing service",
+          "secondaryKeywords": [
+            "surat video editor",
+            "high retention reels editor",
+            "cinematic editing"
+          ],
+          "intro": "Mishwa Zalavadiya delivers food & beverage reel editing service with retention-focused pacing, story clarity, and social-first visual flow.",
+          "sections": [
+            {
+              "heading": "What this service includes",
+              "body": "Story selection, hook optimization, pacing design, sound layering, and export optimization for platform-native performance."
+            },
+            {
+              "heading": "Who this is best for",
+              "body": "Creators, brands, and agencies that need consistent short-form edits with measurable watch-time improvements."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "island-life",
+            "sushi-master"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.054Z",
+          "updatedAt": "2026-02-16T21:11:53.054Z",
+          "indexable": true
+        }
+      ],
+      "caseStudies": [
+        {
+          "id": "case-study-1",
+          "slug": "glow-routines-case-study",
+          "title": "Glow Routines Case Study",
+          "excerpt": "Case study for Glow Routines: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Glow Routines case study",
+          "secondaryKeywords": [
+            "Beauty & Personal Care",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Glow Routines covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Beauty & Personal Care while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "glow-routines"
+          ],
+          "heroImage": "https://i.ytimg.com/vi/aVLwDefz5pY/maxresdefault.jpg",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-2",
+          "slug": "bali-villas-case-study",
+          "title": "Bali Villas Case Study",
+          "excerpt": "Case study for Bali Villas: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Bali Villas case study",
+          "secondaryKeywords": [
+            "Travel & Local experience",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Bali Villas covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Travel & Local experience while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "bali-villas"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-3",
+          "slug": "summer-shades-case-study",
+          "title": "Summer Shades Case Study",
+          "excerpt": "Case study for Summer Shades: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Summer Shades case study",
+          "secondaryKeywords": [
+            "Fashion & Apparel",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Summer Shades covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Fashion & Apparel while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "summer-shades"
+          ],
+          "heroImage": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-4",
+          "slug": "espresso-art-case-study",
+          "title": "Espresso Art Case Study",
+          "excerpt": "Case study for Espresso Art: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Espresso Art case study",
+          "secondaryKeywords": [
+            "Food & Beverage",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Espresso Art covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Food & Beverage while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "espresso-art"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-5",
+          "slug": "crossfit-power-case-study",
+          "title": "Crossfit Power Case Study",
+          "excerpt": "Case study for Crossfit Power: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Crossfit Power case study",
+          "secondaryKeywords": [
+            "Fitness & Wellness",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Crossfit Power covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Fitness & Wellness while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "crossfit-power"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-6",
+          "slug": "skincare-essentials-case-study",
+          "title": "Skincare Essentials Case Study",
+          "excerpt": "Case study for Skincare Essentials: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Skincare Essentials case study",
+          "secondaryKeywords": [
+            "Beauty & Personal Care",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Skincare Essentials covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Beauty & Personal Care while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "skincare-essentials"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-7",
+          "slug": "streetwear-2024-case-study",
+          "title": "Streetwear 2024 Case Study",
+          "excerpt": "Case study for Streetwear 2024: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Streetwear 2024 case study",
+          "secondaryKeywords": [
+            "Fashion & Apparel",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Streetwear 2024 covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Fashion & Apparel while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "streetwear-2024"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "case-study-8",
+          "slug": "island-life-case-study",
+          "title": "Island Life Case Study",
+          "excerpt": "Case study for Island Life: edit strategy, visual pacing, and retention-focused storytelling decisions.",
+          "primaryKeyword": "Island Life case study",
+          "secondaryKeywords": [
+            "Travel & Local experience",
+            "short form editing workflow",
+            "reel editing strategy"
+          ],
+          "intro": "A detailed case study for Island Life covering structure, pacing, and final narrative outcome.",
+          "sections": [
+            {
+              "heading": "Project brief and challenge",
+              "body": "Initial objective: improve attention and clarity for Travel & Local experience while preserving brand tone and visual consistency."
+            },
+            {
+              "heading": "Editing framework and execution",
+              "body": "Applied hook optimization, rhythm cuts, sound emphasis, and scene progression to improve watch continuity and conversion intent."
+            },
+            {
+              "heading": "Outcome and learnings",
+              "body": "The project demonstrates how structured storytelling and editing tempo can improve both audience retention and content memorability."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "island-life"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        }
+      ],
+      "guides": [
+        {
+          "id": "guide-1",
+          "slug": "how-to-improve-reel-retention-in-30-seconds",
+          "title": "How to Improve Reel Retention in 30 Seconds",
+          "excerpt": "How to Improve Reel Retention in 30 Seconds from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "how to improve reel retention in 30 seconds",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "How to Improve Reel Retention in 30 Seconds explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "glow-routines",
+            "bali-villas"
+          ],
+          "heroImage": "https://i.ytimg.com/vi/aVLwDefz5pY/maxresdefault.jpg",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-2",
+          "slug": "hook-and-payoff-editing-structure-for-instagram-reels",
+          "title": "Hook and Payoff Editing Structure for Instagram Reels",
+          "excerpt": "Hook and Payoff Editing Structure for Instagram Reels from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "hook and payoff editing structure for instagram reels",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "Hook and Payoff Editing Structure for Instagram Reels explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "bali-villas",
+            "summer-shades"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-3",
+          "slug": "cinematic-storytelling-for-short-form-video",
+          "title": "Cinematic Storytelling for Short Form Video",
+          "excerpt": "Cinematic Storytelling for Short Form Video from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "cinematic storytelling for short form video",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "Cinematic Storytelling for Short Form Video explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "summer-shades",
+            "espresso-art"
+          ],
+          "heroImage": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-4",
+          "slug": "cutting-patterns-that-improve-watch-time",
+          "title": "Cutting Patterns That Improve Watch Time",
+          "excerpt": "Cutting Patterns That Improve Watch Time from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "cutting patterns that improve watch time",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "Cutting Patterns That Improve Watch Time explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "espresso-art",
+            "crossfit-power"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-5",
+          "slug": "how-to-build-brand-consistent-reel-edits",
+          "title": "How to Build Brand-Consistent Reel Edits",
+          "excerpt": "How to Build Brand-Consistent Reel Edits from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "how to build brand-consistent reel edits",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "How to Build Brand-Consistent Reel Edits explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "crossfit-power",
+            "skincare-essentials"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1200&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-6",
+          "slug": "sound-design-basics-for-reels",
+          "title": "Sound Design Basics for Reels",
+          "excerpt": "Sound Design Basics for Reels from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "sound design basics for reels",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "Sound Design Basics for Reels explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "skincare-essentials",
+            "streetwear-2024"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-7",
+          "slug": "color-and-contrast-workflow-for-mobile-first-videos",
+          "title": "Color and Contrast Workflow for Mobile-First Videos",
+          "excerpt": "Color and Contrast Workflow for Mobile-First Videos from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "color and contrast workflow for mobile-first videos",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "Color and Contrast Workflow for Mobile-First Videos explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "streetwear-2024",
+            "island-life"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        },
+        {
+          "id": "guide-8",
+          "slug": "how-to-plan-reels-for-better-conversion",
+          "title": "How to Plan Reels for Better Conversion",
+          "excerpt": "How to Plan Reels for Better Conversion from Mishwa Zalavadiya: practical methods for better short-form storytelling and retention-driven edits.",
+          "primaryKeyword": "how to plan reels for better conversion",
+          "secondaryKeywords": [
+            "video editing tips",
+            "instagram reels strategy",
+            "retention editing guide"
+          ],
+          "intro": "How to Plan Reels for Better Conversion explains practical editing tactics used in real client and creator projects.",
+          "sections": [
+            {
+              "heading": "Key principle",
+              "body": "Prioritize viewer orientation in the first seconds, then establish clear visual progression to sustain watch behavior."
+            },
+            {
+              "heading": "Execution checklist",
+              "body": "Use hook preview, pacing transitions, subtitle hierarchy, and intentional sound design to maintain continuity and reduce drop-off."
+            }
+          ],
+          "faqs": [
+            {
+              "q": "Can you edit for Instagram Reels?",
+              "a": "Yes. I edit retention-focused reels with strong hooks, pacing, and story payoff."
+            },
+            {
+              "q": "Do you work with brands outside Surat?",
+              "a": "Yes. I collaborate remotely with creators and brands across India and international markets."
+            },
+            {
+              "q": "Do you provide revisions?",
+              "a": "Yes. Revision rounds are included based on project scope and deliverables."
+            }
+          ],
+          "relatedProjectSlugs": [
+            "island-life",
+            "sushi-master"
+          ],
+          "heroImage": "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=800&auto=format&fit=crop",
+          "publishedAt": "2026-02-16T21:11:53.055Z",
+          "updatedAt": "2026-02-16T21:11:53.055Z",
+          "indexable": true
+        }
+      ],
+      "faqs": [
+        {
+          "q": "Do you edit Instagram Reels?",
+          "a": "Yes, with retention-focused pacing, hook clarity, and social-first storytelling."
+        },
+        {
+          "q": "Are remote projects supported?",
+          "a": "Yes. Projects are handled remotely with streamlined review and feedback cycles."
+        },
+        {
+          "q": "Can I request revisions?",
+          "a": "Yes. Revision rounds are available based on scope and project agreement."
+        }
+      ]
+    }
   },
   "analytics": {
     "visits": [

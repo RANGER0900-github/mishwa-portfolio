@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { Instagram, Youtube, Twitter, Mail } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
@@ -12,11 +11,6 @@ const Footer = () => {
 
     if (!content) return null;
     const { footer, social } = content;
-    const seoQuickLinks = [
-        { to: '/mishwa-zalavadiya-video-editor-portfolio', label: 'Video Editor Portfolio' },
-        { to: '/mishwa-zalavadiya-portfolio', label: 'Mishwa Zalavadiya Portfolio' },
-        { to: '/surat-video-editor-portfolio', label: 'Surat Video Editor Portfolio' }
-    ];
 
     if (!footer) return null;
 
@@ -24,7 +18,6 @@ const Footer = () => {
 
     return (
         <footer id="contact" className="relative z-10 pt-20 pb-12">
-            {/* Smooth curve SVG at top */}
             <svg
                 className="w-full h-20 -mb-1"
                 viewBox="0 0 1200 100"
@@ -49,7 +42,6 @@ const Footer = () => {
                 />
             </svg>
 
-            {/* Footer Content */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -58,16 +50,14 @@ const Footer = () => {
             >
                 <div className="max-w-7xl mx-auto py-12 flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                        {/* Copyright */}
                         <motion.div
                             className="text-gray-400 text-sm font-light tracking-wide"
                             whileHover={{ color: '#64ffda' }}
                             transition={{ duration: 0.3 }}
                         >
-                            {footer.copyright || `© ${currentYear} MISHWA. All rights reserved.`}
+                            {footer.copyright || `(c) ${currentYear} MISHWA. All rights reserved.`}
                         </motion.div>
 
-                        {/* Social Icons */}
                         {footer.showSocial && social && (
                             <motion.div
                                 className="flex items-center gap-8"
@@ -123,18 +113,6 @@ const Footer = () => {
                                 )}
                             </motion.div>
                         )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-4 border-t border-white/5">
-                        {seoQuickLinks.map((entry) => (
-                            <Link
-                                key={entry.to}
-                                to={entry.to}
-                                className="text-[11px] uppercase tracking-[0.18em] text-gray-400 hover:text-secondary transition-colors"
-                            >
-                                {entry.label}
-                            </Link>
-                        ))}
                     </div>
                 </div>
             </motion.div>
