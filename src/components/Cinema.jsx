@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useContent } from '../context/ContentContext';
+import { resolveImageSources } from '../utils/imageUtils';
 
 const Cinema = () => {
     const { content } = useContent();
@@ -18,7 +19,10 @@ const Cinema = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {cinema.items && cinema.items.map((item, index) => (
+                    {cinema.items && cinema.items.map((item, index) => {
+                        const { optimizedSrc, webpSrc } = resolveImageSources(item.image);
+                        const isLazy = index > 0;
+                        return (
                         <motion.div
                             key={index}
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -27,7 +31,28 @@ const Cinema = () => {
                             viewport={{ once: true }}
                             className="group relative aspect-video bg-card-bg rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
                         >
-                            <img src={item.image} alt={item.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-70 group-hover:opacity-100" />
+                            {webpSrc ? (
+                                <picture>
+                                    <source srcSet={webpSrc} type="image/webp" />
+                                    <img
+                                        src={optimizedSrc || item.image}
+                                        alt={item.title}
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-70 group-hover:opacity-100"
+                                        loading={isLazy ? 'lazy' : 'eager'}
+                                        decoding="async"
+                                        fetchPriority={isLazy ? 'low' : 'high'}
+                                    />
+                                </picture>
+                            ) : (
+                                <img
+                                    src={optimizedSrc || item.image}
+                                    alt={item.title}
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-70 group-hover:opacity-100"
+                                    loading={isLazy ? 'lazy' : 'eager'}
+                                    decoding="async"
+                                    fetchPriority={isLazy ? 'low' : 'high'}
+                                />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
                             <div className="absolute bottom-0 left-0 p-8">
                                 <span className="text-secondary text-xs font-bold uppercase tracking-widest mb-2 block">{item.category}</span>
@@ -35,7 +60,8 @@ const Cinema = () => {
                                 <p className="text-gray-400 text-sm max-w-sm">{item.description}</p>
                             </div>
                         </motion.div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </section>

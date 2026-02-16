@@ -25,7 +25,7 @@ const Preloader = () => {
                     <div className="w-8 h-8 bg-primary rounded-full blur-md"></div>
                 </motion.div>
                 <span className="font-display font-bold text-xl tracking-widest text-white animate-pulse">
-                    {loadingLabel || 'Loading assets'}
+                    {loadingLabel || 'Preparing portfolio experience'}
                 </span>
                 <div className="w-56 h-1.5 rounded-full bg-white/10 overflow-hidden">
                     <motion.div

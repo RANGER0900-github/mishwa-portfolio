@@ -6,6 +6,7 @@ import { ContentProvider } from './context/ContentContext';
 import { DeviceProfileProvider, useDeviceProfile } from './context/DeviceProfileContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Preloader from './components/Preloader';
+import CookieConsent from './components/CookieConsent';
 
 const Home = lazy(() => import('./pages/Home'));
 const AllReels = lazy(() => import('./pages/AllReels'));
@@ -222,6 +223,7 @@ const MainContent = () => {
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieConsent />
         </Suspense>
       )}
     </>

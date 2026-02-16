@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import { useContent } from '../context/ContentContext';
 import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
+import { resolveImageSources } from '../utils/imageUtils';
 
 const Project = () => {
   const { slug } = useParams();
@@ -32,6 +33,7 @@ const Project = () => {
   }, [content?.projects, project]);
 
   if (!content) return null;
+  const { optimizedSrc: projectImageSrc, webpSrc: projectImageWebp } = resolveImageSources(project?.image || '');
 
   if (!project) {
     return (
@@ -82,13 +84,28 @@ const Project = () => {
 
         <article className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           <div className={`relative rounded-3xl overflow-hidden border border-white/10 bg-card-bg ${isLite ? '' : 'shadow-[0_24px_80px_rgba(0,0,0,0.35)]'}`}>
-            <img
-              src={project.image}
-              alt={`${project.title}${project.category ? ` - ${project.category}` : ''}`}
-              className="w-full h-auto object-cover"
-              loading="eager"
-              fetchPriority="high"
-            />
+            {projectImageWebp ? (
+              <picture>
+                <source srcSet={projectImageWebp} type="image/webp" />
+                <img
+                  src={projectImageSrc || project.image}
+                  alt={`${project.title}${project.category ? ` - ${project.category}` : ''}`}
+                  className="w-full h-auto object-cover"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                />
+              </picture>
+            ) : (
+              <img
+                src={projectImageSrc || project.image}
+                alt={`${project.title}${project.category ? ` - ${project.category}` : ''}`}
+                className="w-full h-auto object-cover"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/10 to-transparent opacity-80 pointer-events-none" />
           </div>
 
@@ -133,14 +150,23 @@ const Project = () => {
           <section className="mt-20">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-6">More Edits<span className="text-secondary">.</span></h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {related.map((item) => (
+              {related.map((item) => {
+                const { optimizedSrc, webpSrc } = resolveImageSources(item.image);
+                return (
                 <Link
                   key={item.id}
                   to={`/project/${item.slug || item.id}`}
                   className={`group block rounded-3xl overflow-hidden border border-white/10 bg-card-bg hover:border-white/20 transition-colors`}
                 >
                   <div className="relative">
-                    <img src={item.image} alt={item.title} className="w-full aspect-[16/10] object-cover opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                    {webpSrc ? (
+                      <picture>
+                        <source srcSet={webpSrc} type="image/webp" />
+                        <img src={optimizedSrc || item.image} alt={item.title} className="w-full aspect-[16/10] object-cover opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" decoding="async" />
+                      </picture>
+                    ) : (
+                      <img src={optimizedSrc || item.image} alt={item.title} className="w-full aspect-[16/10] object-cover opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" decoding="async" />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/10 to-transparent opacity-90" />
                     <div className="absolute bottom-0 left-0 right-0 p-5">
                       {item.category && (
@@ -152,7 +178,8 @@ const Project = () => {
                     </div>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

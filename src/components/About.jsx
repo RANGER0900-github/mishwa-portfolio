@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useContent } from '../context/ContentContext';
 import { useDeviceProfile } from '../context/DeviceProfileContext';
+import { resolveImageSources } from '../utils/imageUtils';
 
 const About = () => {
     const { content } = useContent();
@@ -10,6 +11,7 @@ const About = () => {
     if (!content) return null;
 
     const aboutText = content.about?.text || "I'm Mishwa Zalavadiya, a Surat-based video editor and visual artist who understands the psychology of attention. With a focus on pacing, sound design, and visual storytelling, I help brands convert viewers into followers.";
+    const { optimizedSrc: aboutImageSrc, webpSrc: aboutImageWebp } = resolveImageSources(content.about?.image || '/images/mishwa_portrait.png');
 
     return (
         <section id="about" className={`py-32 px-6 bg-gradient-to-b from-background to-[#112240] relative overflow-hidden ${isLite ? '' : 'will-change-transform'}`}>
@@ -28,7 +30,26 @@ const About = () => {
                         transition={{ duration: 0.8 }}
                     >
                         <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 group">
-                            <img src={content.about?.image || '/images/mishwa_portrait.png'} alt="Mishwa" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                            {aboutImageWebp ? (
+                                <picture>
+                                    <source srcSet={aboutImageWebp} type="image/webp" />
+                                    <img
+                                        src={aboutImageSrc || content.about?.image || '/images/mishwa_portrait.png'}
+                                        alt="Mishwa"
+                                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                </picture>
+                            ) : (
+                                <img
+                                    src={aboutImageSrc || content.about?.image || '/images/mishwa_portrait.png'}
+                                    alt="Mishwa"
+                                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                            )}
                             <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
                         </div>
                     </motion.div>

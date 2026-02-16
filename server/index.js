@@ -248,6 +248,24 @@ const SEO_LANDING_PAGES = Object.freeze({
     }
 });
 const SEO_AI_BOT_ALLOWLIST = ['GPTBot', 'OAI-SearchBot', 'Google-Extended', 'ClaudeBot', 'PerplexityBot', 'CCBot'];
+const GA_MEASUREMENT_ID = sanitizeString(process.env.GA_MEASUREMENT_ID || '', 32).toUpperCase();
+const GA_ENABLED = /^G-[A-Z0-9]+$/.test(GA_MEASUREMENT_ID);
+const GA_CONSENT_DEFAULT = String(process.env.GA_CONSENT_DEFAULT || 'denied').trim().toLowerCase() === 'granted'
+    ? 'granted'
+    : 'denied';
+const SEO_BOT_FASTPATH_ENABLED = String(process.env.SEO_BOT_FASTPATH || 'true').trim().toLowerCase() !== 'false';
+const CANONICAL_PUBLIC_URL = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
+const CANONICAL_PUBLIC_HOST = (() => {
+    if (!CANONICAL_PUBLIC_URL) return '';
+    try {
+        return new URL(CANONICAL_PUBLIC_URL).host.toLowerCase();
+    } catch {
+        return '';
+    }
+})();
+const CANONICAL_WWW_HOST = CANONICAL_PUBLIC_HOST && !CANONICAL_PUBLIC_HOST.startsWith('www.')
+    ? `www.${CANONICAL_PUBLIC_HOST}`
+    : '';
 
 const parseTwitterHandle = (value) => {
     const raw = sanitizeString(String(value || ''), 200);
@@ -257,6 +275,25 @@ const parseTwitterHandle = (value) => {
     const match = trimmed.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]{1,15})$/i);
     if (match?.[1]) return `@${match[1]}`;
     return '';
+};
+
+const getHostWithoutPort = (value) => String(value || '').trim().toLowerCase().replace(/:\d+$/, '');
+
+const getRequestHost = (req) => {
+    const forwardedHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+    return getHostWithoutPort(forwardedHost || req.get('host'));
+};
+
+const getRequestProtocol = (req) => {
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+    return forwardedProto || (req.secure ? 'https' : req.protocol || 'http');
+};
+
+const SEO_CRAWLER_PATTERN = /(googlebot|bingbot|duckduckbot|yandex(bot)?|baiduspider|slurp|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|lighthouse|seositecheckup|sitecheckup)/i;
+
+const isCrawlerRequest = (req) => {
+    const userAgent = String(req.headers['user-agent'] || '');
+    return SEO_CRAWLER_PATTERN.test(userAgent);
 };
 
 // Storage configuration (Redis + in-memory fallback)
@@ -352,6 +389,23 @@ const NOSQL_OPERATOR_KEYS = new Set([
     '__proto__', 'prototype', 'constructor'
 ]);
 
+// Canonical host normalization (non-www -> canonical host).
+app.use((req, res, next) => {
+    if (!CANONICAL_PUBLIC_HOST || !CANONICAL_WWW_HOST) {
+        next();
+        return;
+    }
+
+    const host = getRequestHost(req);
+    if (host !== CANONICAL_WWW_HOST) {
+        next();
+        return;
+    }
+
+    const targetUrl = `https://${CANONICAL_PUBLIC_HOST}${req.originalUrl || req.url || '/'}`;
+    res.redirect(301, targetUrl);
+});
+
 // Security headers
 app.use((req, res, next) => {
     const nonce = crypto.randomBytes(16).toString('base64');
@@ -364,8 +418,13 @@ app.use((req, res, next) => {
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
+
+    const gaScriptSources = GA_ENABLED ? " https://www.googletagmanager.com" : '';
+    const gaConnectSources = GA_ENABLED
+        ? " https://www.google-analytics.com https://region1.google-analytics.com https://stats.g.doubleclick.net https://www.googletagmanager.com"
+        : '';
     res.setHeader('Content-Security-Policy',
-        `default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'nonce-${nonce}'; frame-ancestors 'none';`
+        `default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net${gaConnectSources}; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'nonce-${nonce}'${gaScriptSources}; frame-ancestors 'none';`
     );
     next();
 });
@@ -3178,7 +3237,7 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     }
 
     const title = `${ownerName} | Surat Video Editor Portfolio`;
-    const description = `${ownerName} is a Surat-based video editor & visual artist. Explore high-retention Instagram Reels, cinematic edits, and portfolio work.`;
+    const description = `${ownerName} is a Surat-based video editor and visual artist specializing in high-retention Instagram Reels, cinematic brand storytelling, and portfolio edits built for measurable audience growth.`;
     return buildSeoPayload({
         title,
         description,
@@ -3204,12 +3263,115 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     });
 };
 
-const renderSeoMetaBlock = (seo, nonce) => {
+const buildSeoFallbackMarkup = ({ content, baseUrl }) => {
+    const projects = Array.isArray(content?.projects) ? content.projects.slice(0, 6) : [];
+    const highlights = projects.map((project) => {
+        const slug = encodeURIComponent(String(project?.slug || project?.id || '').trim());
+        const title = escapeHtml(sanitizeString(project?.title || 'Project', 80));
+        if (!slug || !title) return '';
+        return `<li><a href="/project/${slug}">${title}</a></li>`;
+    }).filter(Boolean);
+
+    return `
+<section data-seo-fallback="true" id="seo-static-fallback" style="padding:24px 20px;max-width:980px;margin:0 auto;color:#d9ecff;background:#020c1b;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64ffda;margin:0 0 10px;">Video Editor Portfolio</p>
+  <h1 style="font-size:clamp(28px,4vw,44px);line-height:1.15;margin:0 0 14px;color:#ffffff;">Mishwa Zalavadiya Video Editor Portfolio in Surat</h1>
+  <p style="font-size:17px;line-height:1.7;margin:0 0 16px;color:#9fb3c8;">Surat-based reel editor for high-retention Instagram Reels, cinematic storytelling, and social-first video campaigns.</p>
+  <h2 style="font-size:21px;line-height:1.3;margin:18px 0 10px;color:#ffffff;">Featured Video Editing Work</h2>
+  <p style="font-size:15px;line-height:1.7;margin:0 0 12px;color:#9fb3c8;">Browse project archives, category reels, and branded edits crafted for retention and conversion.</p>
+  <p style="margin:0 0 10px;font-size:14px;">
+    <a href="/reels" style="color:#64ffda;text-decoration:none;margin-right:14px;">View Reel Archives</a>
+    <a href="/surat-video-editor-portfolio" style="color:#64ffda;text-decoration:none;">Surat Video Editor Portfolio</a>
+  </p>
+  ${highlights.length > 0
+        ? `<ul style="margin:10px 0 0;padding-left:18px;line-height:1.6;color:#c9d6e2;">${highlights.join('')}</ul>`
+        : ''}
+  <p style="margin:14px 0 0;font-size:12px;color:#7f93a8;">Canonical: ${escapeHtml(baseUrl)}</p>
+</section>`;
+};
+
+const renderAnalyticsHeadBlock = (nonce, includeAnalytics) => {
+    if (!includeAnalytics || !GA_ENABLED) return '';
+    const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
+    const consentKey = 'mishwa_analytics_consent';
+    const denyPayload = "{ analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }";
+    const grantedPayload = "{ analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' }";
+
+    return [
+        `<script async src="https://www.googletagmanager.com/gtag/js?id=${escapeHtml(GA_MEASUREMENT_ID)}"></script>`,
+        `<script${safeNonce}>`,
+        'window.dataLayer = window.dataLayer || [];',
+        'window.gtag = window.gtag || function gtag(){window.dataLayer.push(arguments);};',
+        `window.__GA_MEASUREMENT_ID = '${escapeHtml(GA_MEASUREMENT_ID)}';`,
+        `window.__GA_CONSENT_KEY = '${consentKey}';`,
+        `window.__GA_CONSENT_DEFAULT = '${GA_CONSENT_DEFAULT}';`,
+        'var savedConsent = null;',
+        `try { savedConsent = localStorage.getItem('${consentKey}'); } catch (_) { savedConsent = null; }`,
+        `gtag('consent', 'default', ${GA_CONSENT_DEFAULT === 'granted' ? grantedPayload : denyPayload});`,
+        'if (savedConsent === "granted") {',
+        `  gtag('consent', 'update', ${grantedPayload});`,
+        "  gtag('js', new Date());",
+        `  gtag('config', '${escapeHtml(GA_MEASUREMENT_ID)}', { anonymize_ip: true, transport_type: 'beacon' });`,
+        '}',
+        '</script>'
+    ].join('\n');
+};
+
+const optimizeRenderBlockingStyles = (html, nonce) => {
+    if (!html || typeof html !== 'string') return html;
+    const stylesheetRegex = /<link\s+([^>]*?)rel=["']stylesheet["']([^>]*?)>/gi;
+    const noscriptLinks = [];
+
+    const transformed = html.replace(stylesheetRegex, (fullTag) => {
+        const hrefMatch = fullTag.match(/href=["']([^"']+)["']/i);
+        if (!hrefMatch?.[1]) return fullTag;
+        const href = hrefMatch[1];
+        const hasCrossorigin = /\bcrossorigin\b/i.test(fullTag);
+        const crossoriginAttr = hasCrossorigin ? ' crossorigin' : '';
+
+        noscriptLinks.push(`<link rel="stylesheet" href="${escapeHtml(href)}"${crossoriginAttr} />`);
+
+        return `<link rel="preload" as="style" href="${escapeHtml(href)}"${crossoriginAttr} /><link rel="stylesheet" href="${escapeHtml(href)}"${crossoriginAttr} media="print" data-async-css="true" />`;
+    });
+
+    if (noscriptLinks.length === 0) return html;
+    const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
+    const loaderScript = [
+        `<script${safeNonce}>`,
+        "(function(){",
+        "var links=document.querySelectorAll('link[data-async-css=\"true\"]');",
+        "for(var i=0;i<links.length;i++){",
+        "var link=links[i];",
+        "var apply=function(target){target.media='all';target.removeAttribute('data-async-css');};",
+        "link.addEventListener('load', function(event){apply(event.currentTarget);}, { once:true });",
+        "setTimeout((function(target){return function(){apply(target);};})(link), 3000);",
+        "}",
+        "})();",
+        '</script>',
+        `<noscript>${noscriptLinks.join('')}</noscript>`
+    ].join('');
+
+    return transformed.replace('</head>', `${loaderScript}\n</head>`);
+};
+
+const injectRootFallbackContent = (html, markup) => {
+    if (!html || !markup) return html;
+    if (html.includes('data-seo-fallback="true"')) return html;
+    return html.replace('<div id="root"></div>', `<div id="root">${markup}</div>`);
+};
+
+const stripClientEntrypointScript = (html) => {
+    if (!html || typeof html !== 'string') return html;
+    return html.replace(/<script[^>]+type=["']module["'][^>]*><\/script>/gi, '');
+};
+
+const renderSeoMetaBlock = (seo, nonce, { includeAnalytics = false } = {}) => {
     const keywords = Array.isArray(seo.keywords) && seo.keywords.length > 0
         ? seo.keywords.join(', ')
         : SEO_DEFAULT_KEYWORDS.join(', ');
     const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
     const jsonLd = Array.isArray(seo.jsonLd) && seo.jsonLd.length > 0 ? JSON.stringify(seo.jsonLd) : '';
+    const analyticsBlock = renderAnalyticsHeadBlock(nonce, includeAnalytics);
     const tags = [
         '<!--__SEO_START__-->',
         `<title>${escapeHtml(seo.title || '')}</title>`,
@@ -3241,6 +3403,7 @@ const renderSeoMetaBlock = (seo, nonce) => {
         '<meta name="twitter:image" content="' + escapeHtml(seo.twitter?.image || '') + '" />',
         '<meta name="twitter:image:alt" content="' + escapeHtml(seo.twitter?.imageAlt || `${SEO_OWNER_NAME} portfolio logo`) + '" />',
         jsonLd ? `<script type="application/ld+json"${safeNonce}>${jsonLd}</script>` : '',
+        analyticsBlock,
         '<!--__SEO_END__-->'
     ];
 
@@ -3277,10 +3440,25 @@ app.get(/.*/, (req, res) => {
     const baseUrl = getPublicSiteUrlForRequest(req);
     const seo = buildSeoForRequest({ pathName: req.path, baseUrl, content: db.content || {} });
     const nonce = res.locals?.cspNonce || '';
-    const seoBlock = renderSeoMetaBlock(seo, nonce);
-    const html = injectSeoIntoHtml(INDEX_HTML_TEMPLATE, seoBlock);
+    const isNoIndex = String(seo.robots || '').includes('noindex');
+    const includeAnalytics = !isNoIndex;
+    const useBotFastPath = SEO_BOT_FASTPATH_ENABLED && !isNoIndex && isCrawlerRequest(req);
 
-    if (String(seo.robots || '').includes('noindex')) {
+    const seoBlock = renderSeoMetaBlock(seo, nonce, { includeAnalytics });
+    let html = injectSeoIntoHtml(INDEX_HTML_TEMPLATE, seoBlock);
+
+    if (req.path === '/' || useBotFastPath) {
+        const fallbackMarkup = buildSeoFallbackMarkup({ content: db.content || {}, baseUrl });
+        html = injectRootFallbackContent(html, fallbackMarkup);
+    }
+
+    html = optimizeRenderBlockingStyles(html, nonce);
+
+    if (useBotFastPath && req.path === '/') {
+        html = stripClientEntrypointScript(html);
+    }
+
+    if (isNoIndex) {
         res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');

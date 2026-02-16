@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { formatExternalLink } from '../utils/linkUtils';
+import { resolveImageSources } from '../utils/imageUtils';
 
 const Work = () => {
     const { content } = useContent();
@@ -53,7 +54,10 @@ const Work = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {projects.map((project, index) => (
+                    {projects.map((project, index) => {
+                        const { optimizedSrc, webpSrc } = resolveImageSources(project.image);
+                        const shouldLazyLoad = index > 1;
+                        return (
                         <motion.div
                             key={project.id}
                             initial={{ opacity: 0, y: 30 }}
@@ -64,11 +68,28 @@ const Work = () => {
                             onClick={() => navigate(`/project/${project.slug || project.id}`)}
                             className="group relative aspect-[9/16] bg-card-bg rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
                         >
-                            <img
-                                src={project.image}
-                                alt={project.title}
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-100"
-                            />
+                            {webpSrc ? (
+                                <picture>
+                                    <source srcSet={webpSrc} type="image/webp" />
+                                    <img
+                                        src={optimizedSrc || project.image}
+                                        alt={project.title}
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-100"
+                                        loading={shouldLazyLoad ? 'lazy' : 'eager'}
+                                        decoding="async"
+                                        fetchPriority={shouldLazyLoad ? 'low' : 'high'}
+                                    />
+                                </picture>
+                            ) : (
+                                <img
+                                    src={optimizedSrc || project.image}
+                                    alt={project.title}
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-100"
+                                    loading={shouldLazyLoad ? 'lazy' : 'eager'}
+                                    decoding="async"
+                                    fetchPriority={shouldLazyLoad ? 'low' : 'high'}
+                                />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent"></div>
 
                             <div
@@ -111,7 +132,8 @@ const Work = () => {
                                 <div className="absolute inset-0 border-2 border-primary/50 rounded-2xl"></div>
                             </div>
                         </motion.div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div className="mt-16 text-center">

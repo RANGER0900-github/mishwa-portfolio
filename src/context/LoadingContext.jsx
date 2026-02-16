@@ -8,14 +8,15 @@ const PER_IMAGE_TIMEOUT_MS = 7000;
 const MAX_PARALLEL_PRELOADS = 3;
 const MAX_BLOCKING_ASSETS = 10;
 const MAX_TOTAL_LOADING_MS = 15000;
+const BOT_USER_AGENT_REGEX = /(googlebot|bingbot|duckduckbot|yandex(bot)?|baiduspider|slurp|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|headlesschrome|lighthouse|seositecheckup|sitecheckup)/i;
 
 const STATIC_ASSETS = [
-    '/images/mishwa_portrait.png',
-    '/images/reel_thumbnail_1.png',
-    '/images/reel_thumbnail_2.png',
-    '/images/reel_thumbnail_3.png',
-    '/images/reel_thumbnail_4.png',
-    '/images/cinematic_thumbnail_1.png'
+    '/images/mishwa_portrait.webp',
+    '/images/reel_thumbnail_1.webp',
+    '/images/reel_thumbnail_2.webp',
+    '/images/reel_thumbnail_3.webp',
+    '/images/reel_thumbnail_4.webp',
+    '/images/cinematic_thumbnail_1.webp'
 ];
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
@@ -129,7 +130,7 @@ export const LoadingProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [loadedAssets, setLoadedAssets] = useState(0);
     const [totalAssets, setTotalAssets] = useState(0);
-    const [loadingLabel, setLoadingLabel] = useState('Preparing startup');
+    const [loadingLabel, setLoadingLabel] = useState('Preparing Mishwa portfolio');
     const { loading: contentLoading, content } = useContent();
     const { perfMode } = useDeviceProfile();
     const startedRef = useRef(false);
@@ -144,19 +145,20 @@ export const LoadingProvider = ({ children }) => {
         startedRef.current = true;
 
         const isLite = perfMode === 'lite';
+        const isBotFastPath = BOT_USER_AGENT_REGEX.test(String(navigator.userAgent || ''));
         let isActive = true;
         const snapshot = contentRef.current;
-        const assetUrls = isLite
+        const assetUrls = (isLite || isBotFastPath)
             ? STATIC_ASSETS.filter((src) => src.startsWith('/images/')).slice(0, 2)
             : collectImageAssets(snapshot).filter(isPreloadAllowedUrl);
-        const criticalUrls = isLite
+        const criticalUrls = (isLite || isBotFastPath)
             ? assetUrls
             : collectCriticalAssets(snapshot).filter(isPreloadAllowedUrl);
         const dedupedUrls = Array.from(new Set(assetUrls));
         const loadedUrls = new Set();
         setTotalAssets(dedupedUrls.length);
         setLoadedAssets(0);
-        setLoadingLabel(isLite ? 'Starting experience' : 'Loading media assets');
+        setLoadingLabel(isLite || isBotFastPath ? 'Starting portfolio experience' : 'Loading portfolio highlights');
 
         const markLoaded = (src) => {
             if (!isActive || loadedUrls.has(src)) return;
@@ -167,21 +169,21 @@ export const LoadingProvider = ({ children }) => {
         const blockingPromise = preloadInBatches(criticalUrls, markLoaded);
 
         const timeoutPromise = new Promise((resolve) => {
-            setTimeout(() => resolve('timeout'), isLite ? 1200 : MAX_BLOCKING_PRELOAD_MS);
+            setTimeout(() => resolve('timeout'), isLite || isBotFastPath ? 900 : MAX_BLOCKING_PRELOAD_MS);
         });
 
         Promise.race([blockingPromise, timeoutPromise]).then(() => {
             if (!isActive) return;
-            setLoadingLabel('Finalizing experience');
+            setLoadingLabel('Finalizing portfolio');
             setTimeout(() => {
                 if (isActive) setIsLoading(false);
             }, 200);
 
-            if (isLite) return;
+            if (isLite || isBotFastPath) return;
 
             const remaining = dedupedUrls.filter((src) => !loadedUrls.has(src));
             if (remaining.length > 0) {
-                setLoadingLabel('Warming remaining assets');
+                setLoadingLabel('Optimizing remaining visuals');
                 preloadInBatches(remaining, markLoaded).catch(() => undefined);
             }
         });
@@ -195,7 +197,7 @@ export const LoadingProvider = ({ children }) => {
         if (!isLoading) return;
 
         const watchdog = setTimeout(() => {
-            setLoadingLabel('Starting experience');
+            setLoadingLabel('Launching portfolio');
             setIsLoading(false);
         }, MAX_TOTAL_LOADING_MS);
 

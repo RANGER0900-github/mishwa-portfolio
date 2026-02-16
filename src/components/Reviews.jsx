@@ -3,6 +3,7 @@ import { Mail, Instagram, ArrowUpRight } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
+import { resolveImageSources } from '../utils/imageUtils';
 
 const Reviews = () => {
     const { content } = useContent();
@@ -29,7 +30,9 @@ const Reviews = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {reviews.map((review, i) => (
+                        {reviews.map((review, i) => {
+                            const { optimizedSrc, webpSrc } = resolveImageSources(review.image);
+                            return (
                             <motion.div
                                 key={review.id || i}
                                 initial={{ opacity: 0, y: 30 }}
@@ -46,7 +49,14 @@ const Reviews = () => {
                                 <div className="absolute top-8 right-8 text-primary/20 text-7xl font-serif leading-none">"</div>
                                 <div className="flex items-center gap-4 mb-8">
                                     <div className="w-14 h-14 rounded-full overflow-hidden border border-white/20 group-hover:border-primary transition-colors duration-200">
-                                        <img src={review.image} alt={review.name} className="w-full h-full object-cover" />
+                                        {webpSrc ? (
+                                            <picture>
+                                                <source srcSet={webpSrc} type="image/webp" />
+                                                <img src={optimizedSrc || review.image} alt={review.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                                            </picture>
+                                        ) : (
+                                            <img src={optimizedSrc || review.image} alt={review.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                                        )}
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-white text-lg">{review.name}</h4>
@@ -55,7 +65,8 @@ const Reviews = () => {
                                 </div>
                                 <p className="text-gray-300 italic text-lg relative z-10 leading-relaxed">{review.text}</p>
                             </motion.div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 

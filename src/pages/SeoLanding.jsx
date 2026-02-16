@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useContent } from '../context/ContentContext';
 import { formatExternalLink } from '../utils/linkUtils';
+import { resolveImageSources } from '../utils/imageUtils';
 
 const LANDING_CONTENT = {
   '/mishwa-zalavadiya-video-editor-portfolio': {
@@ -87,14 +88,23 @@ const SeoLanding = () => {
           <section className="mt-14">
             <h2 className="text-2xl md:text-3xl font-display font-bold mb-5">Featured Portfolio Projects<span className="text-secondary">.</span></h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {projects.map((project) => (
+              {projects.map((project) => {
+                const { optimizedSrc, webpSrc } = resolveImageSources(project.image);
+                return (
                 <Link
                   key={project.id}
                   to={`/project/${project.slug || project.id}`}
                   className="rounded-2xl overflow-hidden border border-white/10 bg-card-bg group"
                 >
                   <div className="relative">
-                    <img src={project.image} alt={project.title} className="w-full aspect-[16/10] object-cover opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" />
+                    {webpSrc ? (
+                      <picture>
+                        <source srcSet={webpSrc} type="image/webp" />
+                        <img src={optimizedSrc || project.image} alt={project.title} className="w-full aspect-[16/10] object-cover opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" decoding="async" />
+                      </picture>
+                    ) : (
+                      <img src={optimizedSrc || project.image} alt={project.title} className="w-full aspect-[16/10] object-cover opacity-80 group-hover:opacity-100 transition-opacity" loading="lazy" decoding="async" />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/10 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4">
                       <div className="text-[11px] uppercase tracking-[0.2em] text-secondary font-bold mb-1">{project.category || 'Portfolio'}</div>
@@ -102,7 +112,8 @@ const SeoLanding = () => {
                     </div>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

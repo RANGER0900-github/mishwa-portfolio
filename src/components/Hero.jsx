@@ -25,6 +25,7 @@ const Hero = () => {
             </div>
 
             <div className="relative z-10 text-center px-4">
+                <h1 className="sr-only">Mishwa Zalavadiya Video Editor Portfolio in Surat</h1>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -34,14 +35,14 @@ const Hero = () => {
                     <p className="text-white/70 text-sm md:text-base font-semibold tracking-wide mb-4">Mishwa Zalavadiya</p>
                 </motion.div>
 
-                <motion.h1
+                <motion.p
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
                     className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter text-white mb-6 will-change-transform"
                     dangerouslySetInnerHTML={{ __html: hero.title.replace('.', '<span class="text-secondary">.</span>') }} // Hack to keep the dot colored if it exists
                 >
-                </motion.h1>
+                </motion.p>
 
                 <motion.p
                     initial={{ opacity: 0 }}

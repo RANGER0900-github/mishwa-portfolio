@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
+import { resolveImageSources } from '../utils/imageUtils';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -100,18 +101,34 @@ const AllReels = () => {
                 {/* Big Masonry Grid */}
                 {isLite ? (
                     <div className="columns-1 md:columns-2 xl:columns-3 gap-8 space-y-8 mb-32 px-4 md:px-12">
-                        {filteredReels.map((reel) => (
+                        {filteredReels.map((reel) => {
+                            const { optimizedSrc, webpSrc } = resolveImageSources(reel.image);
+                            return (
                             <div
                                 key={reel.id}
                                 onClick={() => navigate(`/project/${reel.slug || reel.id}`)}
                                 className="group relative break-inside-avoid rounded-3xl overflow-hidden cursor-pointer border border-white/5 bg-card-bg mb-8"
                             >
-                                <img
-                                    src={reel.image}
-                                    alt={reel.title}
-                                    className="w-full h-auto object-cover"
-                                    loading="lazy"
-                                />
+                                {webpSrc ? (
+                                    <picture>
+                                        <source srcSet={webpSrc} type="image/webp" />
+                                        <img
+                                            src={optimizedSrc || reel.image}
+                                            alt={reel.title}
+                                            className="w-full h-auto object-cover"
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                    </picture>
+                                ) : (
+                                    <img
+                                        src={optimizedSrc || reel.image}
+                                        alt={reel.title}
+                                        className="w-full h-auto object-cover"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                )}
 
                                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-80"></div>
 
@@ -147,12 +164,15 @@ const AllReels = () => {
                                     <ArrowUpRight className="w-5 h-5" />
                                 </button>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <motion.div layout className="columns-1 md:columns-2 xl:columns-3 gap-8 space-y-8 mb-32 px-4 md:px-12">
                         <AnimatePresence mode='popLayout'>
-                            {filteredReels.map((reel) => (
+                            {filteredReels.map((reel) => {
+                                const { optimizedSrc, webpSrc } = resolveImageSources(reel.image);
+                                return (
                                 <motion.div
                                     layout
                                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -163,12 +183,26 @@ const AllReels = () => {
                                     onClick={() => navigate(`/project/${reel.slug || reel.id}`)}
                                     className="group relative break-inside-avoid rounded-3xl overflow-hidden cursor-pointer border border-white/5 bg-card-bg mb-8"
                                 >
-                                    <img
-                                        src={reel.image}
-                                        alt={reel.title}
-                                        className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
-                                        loading="lazy"
-                                    />
+                                    {webpSrc ? (
+                                        <picture>
+                                            <source srcSet={webpSrc} type="image/webp" />
+                                            <img
+                                                src={optimizedSrc || reel.image}
+                                                alt={reel.title}
+                                                className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                        </picture>
+                                    ) : (
+                                        <img
+                                            src={optimizedSrc || reel.image}
+                                            alt={reel.title}
+                                            className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                    )}
 
                                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
 
@@ -204,7 +238,8 @@ const AllReels = () => {
                                         <ArrowUpRight className="w-5 h-5" />
                                     </button>
                                 </motion.div>
-                            ))}
+                                );
+                            })}
                         </AnimatePresence>
                     </motion.div>
                 )}
