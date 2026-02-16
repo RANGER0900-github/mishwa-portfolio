@@ -787,10 +787,7 @@ const getRequestHost = (req) => {
     return getHostWithoutPort(forwardedHost || req.get('host'));
 };
 
-const getRequestProtocol = (req) => {
-    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
-    return forwardedProto || (req.secure ? 'https' : req.protocol || 'http');
-};
+// `getRequestProtocol` was removed because it's not used anywhere in this file.
 
 const SEO_CRAWLER_PATTERN = /(googlebot|bingbot|duckduckbot|yandex(bot)?|baiduspider|slurp|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|lighthouse|seositecheckup|sitecheckup)/i;
 
