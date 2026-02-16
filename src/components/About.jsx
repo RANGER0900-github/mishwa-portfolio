@@ -1,16 +1,23 @@
 import { motion } from 'framer-motion';
 import { useContent } from '../context/ContentContext';
+import { useDeviceProfile } from '../context/DeviceProfileContext';
 
 const About = () => {
     const { content } = useContent();
+    const { perfMode } = useDeviceProfile();
+    const isLite = perfMode === 'lite';
 
     if (!content) return null;
 
+    const aboutText = content.about?.text || "I'm Mishwa, a Surat-based video editor and visual artist who understands the psychology of attention. With a focus on pacing, sound design, and visual storytelling, I help brands convert viewers into followers.";
+
     return (
-        <section id="about" className="py-32 px-6 bg-gradient-to-b from-background to-[#112240] relative overflow-hidden will-change-transform">
+        <section id="about" className={`py-32 px-6 bg-gradient-to-b from-background to-[#112240] relative overflow-hidden ${isLite ? '' : 'will-change-transform'}`}>
 
             {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
+            {!isLite && (
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
+            )}
 
             <div className="max-w-7xl mx-auto">
                 {/* About & Stats */}
@@ -21,7 +28,7 @@ const About = () => {
                         transition={{ duration: 0.8 }}
                     >
                         <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 group">
-                            <img src={content.about?.image || '/images/mishwa_portrait.png'} alt="Mishwa" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 will-change-transform" />
+                            <img src={content.about?.image || '/images/mishwa_portrait.png'} alt="Mishwa" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                             <div className="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
                         </div>
                     </motion.div>
@@ -30,9 +37,7 @@ const About = () => {
                         <span className="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">About Me</span>
                         <h2 className="text-5xl md:text-6xl font-display font-bold text-white mb-6">More Than Just Cuts.</h2>
                         <p className="text-gray-400 text-lg leading-relaxed mb-8">
-                            I'm Mishwa, a visual artist who understands the psychology of attention.
-                            My edits don't just look good—they perform. With a focus on pacing, sound design, and visual storytelling,
-                            I help brands convert viewers into followers.
+                            {aboutText}
                         </p>
 
                         <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-8">

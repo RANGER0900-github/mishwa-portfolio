@@ -1,15 +1,18 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useContent } from '../context/ContentContext';
 import { formatExternalLink } from '../utils/linkUtils';
 
 const Work = () => {
     const { content } = useContent();
+    const navigate = useNavigate();
 
     if (!content) return null;
     const projects = (content.projects || []).slice(0, 4); // Show only first 4 projects
 
-    const handleProjectClick = (project) => {
+    const openExternal = (event, project) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
         if (project.link) {
             try {
                 // fire-and-forget tracking for reel click
@@ -20,7 +23,7 @@ const Work = () => {
                     body: JSON.stringify({ reelId: project.id, visitId })
                 }).catch(() => { });
             } catch { }
-            window.open(formatExternalLink(project.link), '_blank');
+            window.open(formatExternalLink(project.link), '_blank', 'noopener,noreferrer');
         }
     };
 
@@ -58,7 +61,8 @@ const Work = () => {
                             transition={{ duration: 0.5, delay: index * 0.1 }}
                             viewport={{ once: true }}
                             whileHover={{ y: -10 }}
-                            className="group relative aspect-[9/16] bg-card-bg rounded-2xl overflow-hidden border border-white/5"
+                            onClick={() => navigate(`/project/${project.slug || project.id}`)}
+                            className="group relative aspect-[9/16] bg-card-bg rounded-2xl overflow-hidden border border-white/5 cursor-pointer"
                         >
                             <img
                                 src={project.image}
@@ -93,9 +97,9 @@ const Work = () => {
 
                             {/* Arrow Icon - Click to navigate */}
                             <button
-                                onClick={() => handleProjectClick(project)}
+                                onClick={(e) => openExternal(e, project)}
                                 className="absolute bottom-6 right-6 z-20 p-3 rounded-full bg-white/10 border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-secondary hover:text-black hover:scale-110"
-                                aria-label="Open project"
+                                aria-label="Open reel externally"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>

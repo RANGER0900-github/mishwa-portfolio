@@ -11,6 +11,7 @@ const Preloader = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8, ease: "easeInOut" }}
             className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center"
+            data-testid="preloader"
         >
             <div className="flex flex-col items-center gap-4">
                 <motion.div

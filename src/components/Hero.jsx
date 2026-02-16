@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion';
 import { useContent } from '../context/ContentContext';
+import { useDeviceProfile } from '../context/DeviceProfileContext';
 
 const Hero = () => {
     const { content } = useContent();
+    const { perfMode } = useDeviceProfile();
+    const isLite = perfMode === 'lite';
 
     // Guard clause in case content isn't loaded yet (though Preloader should handle this)
     if (!content) return null;
@@ -13,8 +16,12 @@ const Hero = () => {
         <section className="relative h-screen flex items-center justify-center overflow-hidden">
             {/* Background Elements */}
             <div className="absolute inset-0 bg-background z-0">
-                <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse-glow"></div>
-                <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] animate-pulse-glow delay-1000"></div>
+                {!isLite && (
+                    <>
+                        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] animate-pulse-glow"></div>
+                        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] animate-pulse-glow delay-1000"></div>
+                    </>
+                )}
             </div>
 
             <div className="relative z-10 text-center px-4">

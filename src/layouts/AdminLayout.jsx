@@ -3,8 +3,11 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Film, Users, Settings, LogOut, Bell, Menu, X } from 'lucide-react';
 import { adminFetch } from '../utils/adminApi';
+import { useDeviceProfile } from '../context/DeviceProfileContext';
 
 const AdminLayout = () => {
+    const { perfMode } = useDeviceProfile();
+    const isLite = perfMode === 'lite';
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -95,10 +98,12 @@ const AdminLayout = () => {
     return (
         <div className="flex min-h-screen bg-black text-white selection:bg-secondary selection:text-black font-sans overflow-x-clip">
             {/* Background Ambience */}
-            <div className="fixed inset-0 z-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] opacity-30"></div>
-                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] opacity-30"></div>
-            </div>
+            {!isLite && (
+                <div className="fixed inset-0 z-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] opacity-30"></div>
+                    <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] opacity-30"></div>
+                </div>
+            )}
 
             {/* Mobile Header */}
             <div className={`md:hidden fixed top-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between ${isCompactScreen ? 'px-4 pt-[calc(env(safe-area-inset-top,0)+0.65rem)] pb-3' : 'px-5 pt-[calc(env(safe-area-inset-top,0)+0.85rem)] pb-4'}`}>
@@ -108,6 +113,7 @@ const AdminLayout = () => {
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     className="p-2 text-white hover:bg-white/10 rounded-xl transition-colors"
+                    aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
                 >
                     {isMobileMenuOpen ? <X /> : <Menu />}
                 </button>
@@ -219,7 +225,10 @@ const AdminLayout = () => {
                 </main>
             </div>
 
-            <div className={`md:hidden fixed bottom-2 left-2 right-2 z-[40] bg-[#0d1b2a]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 pb-[calc(env(safe-area-inset-bottom,0)+0.5rem)] transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0 translate-y-8 pointer-events-none' : 'opacity-100 translate-y-0'}`}>
+            <div
+                data-testid="admin-bottom-nav"
+                className={`md:hidden fixed bottom-2 left-2 right-2 z-[40] bg-[#0d1b2a]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 pb-[calc(env(safe-area-inset-bottom,0)+0.5rem)] transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0 translate-y-8 pointer-events-none' : 'opacity-100 translate-y-0'}`}
+            >
                 <nav className="flex items-center justify-between gap-1">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path;

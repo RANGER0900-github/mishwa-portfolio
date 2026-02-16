@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useContent } from './ContentContext';
+import { useDeviceProfile } from './DeviceProfileContext';
 
 const LoadingContext = createContext();
 const MAX_BLOCKING_PRELOAD_MS = 5000;
 const PER_IMAGE_TIMEOUT_MS = 7000;
-const MAX_PARALLEL_PRELOADS = 6;
+const MAX_PARALLEL_PRELOADS = 3;
 const MAX_BLOCKING_ASSETS = 10;
 const MAX_TOTAL_LOADING_MS = 15000;
 
@@ -17,11 +18,29 @@ const STATIC_ASSETS = [
     '/images/cinematic_thumbnail_1.png'
 ];
 
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_STORAGE_PREFIX = SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public/` : '';
+
 const isLikelyImageUrl = (value) => {
     if (!value || typeof value !== 'string') return false;
     if (value.startsWith('data:image/')) return true;
     if (value.startsWith('/images/')) return true;
     return /\.(png|jpe?g|webp|gif|svg|avif)(\?.*)?$/i.test(value);
+};
+
+const isPreloadAllowedUrl = (value) => {
+    if (!isLikelyImageUrl(value)) return false;
+    const trimmed = value.trim();
+    if (trimmed.startsWith('data:image/')) return true;
+    if (SUPABASE_STORAGE_PREFIX && trimmed.startsWith(SUPABASE_STORAGE_PREFIX)) return true;
+
+    // Allow same-origin (includes /images/... and any relative URLs)
+    try {
+        const resolved = new URL(trimmed, window.location.origin);
+        return resolved.origin === window.location.origin;
+    } catch {
+        return false;
+    }
 };
 
 const collectImageAssets = (content) => {
@@ -112,6 +131,7 @@ export const LoadingProvider = ({ children }) => {
     const [totalAssets, setTotalAssets] = useState(0);
     const [loadingLabel, setLoadingLabel] = useState('Preparing startup');
     const { loading: contentLoading, content } = useContent();
+    const { perfMode } = useDeviceProfile();
     const startedRef = useRef(false);
     const contentRef = useRef(content);
 
@@ -123,15 +143,20 @@ export const LoadingProvider = ({ children }) => {
         if (contentLoading || startedRef.current) return;
         startedRef.current = true;
 
+        const isLite = perfMode === 'lite';
         let isActive = true;
         const snapshot = contentRef.current;
-        const assetUrls = collectImageAssets(snapshot);
-        const criticalUrls = collectCriticalAssets(snapshot);
+        const assetUrls = isLite
+            ? STATIC_ASSETS.filter((src) => src.startsWith('/images/')).slice(0, 2)
+            : collectImageAssets(snapshot).filter(isPreloadAllowedUrl);
+        const criticalUrls = isLite
+            ? assetUrls
+            : collectCriticalAssets(snapshot).filter(isPreloadAllowedUrl);
         const dedupedUrls = Array.from(new Set(assetUrls));
         const loadedUrls = new Set();
         setTotalAssets(dedupedUrls.length);
         setLoadedAssets(0);
-        setLoadingLabel('Loading media assets');
+        setLoadingLabel(isLite ? 'Starting experience' : 'Loading media assets');
 
         const markLoaded = (src) => {
             if (!isActive || loadedUrls.has(src)) return;
@@ -142,7 +167,7 @@ export const LoadingProvider = ({ children }) => {
         const blockingPromise = preloadInBatches(criticalUrls, markLoaded);
 
         const timeoutPromise = new Promise((resolve) => {
-            setTimeout(() => resolve('timeout'), MAX_BLOCKING_PRELOAD_MS);
+            setTimeout(() => resolve('timeout'), isLite ? 1200 : MAX_BLOCKING_PRELOAD_MS);
         });
 
         Promise.race([blockingPromise, timeoutPromise]).then(() => {
@@ -150,7 +175,9 @@ export const LoadingProvider = ({ children }) => {
             setLoadingLabel('Finalizing experience');
             setTimeout(() => {
                 if (isActive) setIsLoading(false);
-            }, 250);
+            }, 200);
+
+            if (isLite) return;
 
             const remaining = dedupedUrls.filter((src) => !loadedUrls.has(src));
             if (remaining.length > 0) {
@@ -162,7 +189,7 @@ export const LoadingProvider = ({ children }) => {
         return () => {
             isActive = false;
         };
-    }, [contentLoading]);
+    }, [contentLoading, perfMode]);
 
     useEffect(() => {
         if (!isLoading) return;

@@ -7,7 +7,7 @@
     "hero": {
       "title": "MISHWA.",
       "subtitle": "VIDEO EDITOR & VISUAL ARTIST",
-      "description": "Crafting scroll-stopping narratives for the digital age. Specializing in high-retention Instagram Reels and cinematic storytelling.",
+      "description": "Surat-based video editor crafting scroll-stopping narratives for the digital age. Specializing in high-retention Instagram Reels and cinematic storytelling.",
       "buttonText": "View Portfolio"
     },
     "social": {
@@ -40,7 +40,8 @@
         "textPosition": {
           "x": 50,
           "y": 85
-        }
+        },
+        "slug": "glow-routines"
       },
       {
         "id": 102,
@@ -48,7 +49,8 @@
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1200&auto=format&fit=crop",
         "orientation": "landscape",
-        "textColor": "#ffffff"
+        "textColor": "#ffffff",
+        "slug": "bali-villas"
       },
       {
         "id": 103,
@@ -56,119 +58,136 @@
         "category": "Fashion & Apparel",
         "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769854177644-42e126a6.webp",
         "orientation": "portrait",
-        "textColor": "#ffffff"
+        "textColor": "#ffffff",
+        "slug": "summer-shades"
       },
       {
         "id": 104,
         "title": "Espresso Art",
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "espresso-art"
       },
       {
         "id": 105,
         "title": "Crossfit Power",
         "category": "Fitness & Wellness",
         "image": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "crossfit-power"
       },
       {
         "id": 106,
         "title": "Skincare Essentials",
         "category": "Beauty & Personal Care",
         "image": "https://images.unsplash.com/photo-1616683693504-3ea7e9ad6fec?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "skincare-essentials"
       },
       {
         "id": 107,
         "title": "Streetwear 2024",
         "category": "Fashion & Apparel",
         "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "streetwear-2024"
       },
       {
         "id": 108,
         "title": "Island Life",
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "island-life"
       },
       {
         "id": 109,
         "title": "Sushi Master",
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1579584425555-c3ce17fd43ea?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "sushi-master"
       },
       {
         "id": 110,
         "title": "Yoga Flow",
         "category": "Fitness & Wellness",
         "image": "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "yoga-flow"
       },
       {
         "id": 111,
         "title": "Makeup Mastery",
         "category": "Beauty & Personal Care",
         "image": "https://images.unsplash.com/photo-1522335789203-abd1aaccd158?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "makeup-mastery"
       },
       {
         "id": 112,
         "title": "Vintage Vibes",
         "category": "Fashion & Apparel",
         "image": "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "vintage-vibes"
       },
       {
         "id": 113,
         "title": "Parisian Streets",
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "parisian-streets"
       },
       {
         "id": 114,
         "title": "Burger Bliss",
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "burger-bliss"
       },
       {
         "id": 115,
         "title": "Gym Rat",
         "category": "Fitness & Wellness",
         "image": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "gym-rat"
       },
       {
         "id": 116,
         "title": "Mountain Peak",
         "category": "Travel & Local experience",
         "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "mountain-peak"
       },
       {
         "id": 117,
         "title": "Healthy Greens",
         "category": "Food & Beverage",
         "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "healthy-greens"
       },
       {
         "id": 118,
         "title": "Spa Day",
         "category": "Beauty & Personal Care",
         "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1200&auto=format&fit=crop",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "slug": "spa-day"
       },
       {
         "id": 119,
         "title": "Urban Style",
         "category": "Fashion & Apparel",
         "image": "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=800&auto=format&fit=crop",
-        "orientation": "portrait"
+        "orientation": "portrait",
+        "slug": "urban-style"
       }
     ],
     "about": {
@@ -182,7 +201,7 @@
         "Years",
         "Views"
       ],
-      "text": "I am a creative video editor",
+      "text": "I'm Mishwa, a Surat-based video editor and visual artist who understands the psychology of attention. With a focus on pacing, sound design, and visual storytelling, I help brands convert viewers into followers.",
       "image": "https://kgramjutjldqiabjzrih.supabase.co/storage/v1/object/public/portfolio-images/1769867112612-b9339779.jfif"
     },
     "cinema": {
@@ -230,11 +249,52 @@
     ]
   },
   "analytics": {
-    "visits": [],
+    "visits": [
+      {
+        "id": "1771071911967",
+        "timestamp": "2026-02-14T12:25:11.967Z",
+        "ip": "::ffff:127.0.0.1",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/144.0.0.0 Safari/537.36",
+        "device_type": "desktop",
+        "country": "Localhost",
+        "city": "Development Machine",
+        "region": "Local",
+        "latitude": 0,
+        "longitude": 0,
+        "isp": "Localhost",
+        "is_vpn": false,
+        "connection_type": "ethernet",
+        "timezone": "Asia/Calcutta",
+        "page_viewed": "/",
+        "reel_id": null,
+        "session_duration": 160,
+        "isVpn": false,
+        "connectionType": "ethernet",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "local",
+        "pageViewed": "/",
+        "pageHistory": [
+          "/"
+        ],
+        "page_history": [
+          "/"
+        ]
+      }
+    ],
     "ip_logs": [],
     "reelClicks": {},
     "sessionDurations": {
-      "26208c00-f5d5-4687-8f28-61bacec20c08": 55
+      "26208c00-f5d5-4687-8f28-61bacec20c08": 55,
+      "1771071911967": 160,
+      "f11ea44a-0951-464d-967c-f9389adb9f98": 152,
+      "2979c3e8-68ed-4989-9933-98322997a5f6": 103,
+      "85497c21-5922-43c8-becb-a0f77dd5ec2c": 83
     },
     "profileOverrides": {
       "26208c00-f5d5-4687-8f28-61bacec20c08": {
@@ -285,6 +345,104 @@
           "/admin"
         ],
         "updatedAt": "2026-02-08T16:53:46.638Z"
+      },
+      "1771071911967": {
+        "country": "Localhost",
+        "city": "Development Machine",
+        "region": "Local",
+        "latitude": 0,
+        "longitude": 0,
+        "isp": "Localhost",
+        "isVpn": false,
+        "connectionType": "ethernet",
+        "timezone": "Asia/Calcutta",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "local",
+        "pageViewed": "/",
+        "pageHistory": [
+          "/"
+        ],
+        "updatedAt": "2026-02-14T12:25:12.141Z"
+      },
+      "f11ea44a-0951-464d-967c-f9389adb9f98": {
+        "country": "Localhost",
+        "city": "Development Machine",
+        "region": "Local",
+        "latitude": 0,
+        "longitude": 0,
+        "isp": "Localhost",
+        "isVpn": false,
+        "connectionType": "ethernet",
+        "timezone": "Asia/Calcutta",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "local",
+        "pageViewed": "/",
+        "pageHistory": [
+          "/",
+          "/reels"
+        ],
+        "updatedAt": "2026-02-16T15:46:33.617Z"
+      },
+      "2979c3e8-68ed-4989-9933-98322997a5f6": {
+        "country": "India",
+        "city": "Surat",
+        "region": "Gujarat",
+        "latitude": 21.16676,
+        "longitude": 72.8334,
+        "isp": "Ishan Netsol Pvt Ltd",
+        "isVpn": false,
+        "connectionType": "wifi",
+        "timezone": "Asia/Kolkata",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "ipapi.is",
+        "pageViewed": "/",
+        "pageHistory": [
+          "/"
+        ],
+        "updatedAt": "2026-02-16T15:49:04.517Z"
+      },
+      "85497c21-5922-43c8-becb-a0f77dd5ec2c": {
+        "country": "India",
+        "city": "Vapi",
+        "region": "Gujarat",
+        "latitude": 20.37175,
+        "longitude": 72.90493,
+        "isp": "Bharti Airtel Ltd.",
+        "isVpn": false,
+        "connectionType": "wifi",
+        "timezone": "Asia/Kolkata",
+        "isCrawler": false,
+        "isBot": false,
+        "botName": null,
+        "botReason": "ua-looks-human",
+        "botConfidence": 0.78,
+        "visitorKind": "human",
+        "visitorEmoji": "🧑",
+        "profileSource": "ipapi.is",
+        "pageViewed": "/",
+        "pageHistory": [
+          "/",
+          "/reels"
+        ],
+        "updatedAt": "2026-02-16T15:52:31.246Z"
       }
     },
     "clearedAt": "2026-02-08T16:53:36.167Z",
@@ -300,6 +458,106 @@
     }
   },
   "notifications": [
+    {
+      "id": "79e2b993-1be2-4d97-a54f-b9f7b14f4beb",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: 27.60.21.64",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:53.615Z",
+      "read": false
+    },
+    {
+      "id": "0b22ace4-9256-45f5-a03e-3d1331033359",
+      "type": "attack_blocked",
+      "title": "Rate Limit Exceeded",
+      "message": "IP exceeded rate limit for rule=login. requests=11, violations=1/6 | Geo: Vapi, India | Region: Gujarat | ISP: Bharti Airtel Ltd. | VPN: no | Connection: wifi",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:53.192Z",
+      "read": false
+    },
+    {
+      "id": "292f4849-6953-48a7-af82-3b1594d73892",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:47.550Z",
+      "read": false
+    },
+    {
+      "id": "e356b74a-f46a-404a-9c57-e0f36f68e0d0",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: Admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:46.179Z",
+      "read": false
+    },
+    {
+      "id": "a51ad369-0197-41d7-9687-30cc2b428186",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: Admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:46.038Z",
+      "read": false
+    },
+    {
+      "id": "b149efe6-7147-4816-9a7e-948d6de4a146",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: Admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:44.524Z",
+      "read": false
+    },
+    {
+      "id": "009f5d87-63b5-4a0e-bd83-6b7f26a0f2f0",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: Admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:39.444Z",
+      "read": false
+    },
+    {
+      "id": "19b243af-caad-468d-b355-8237251a50ad",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: Admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:38.558Z",
+      "read": false
+    },
+    {
+      "id": "7303bc0a-70ac-49bc-9956-e143551be80d",
+      "type": "warning",
+      "title": "Failed Login Attempt",
+      "message": "Failed login attempt from IP: 27.60.21.64 with username: Admin",
+      "ip": "27.60.21.64",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:53:27.267Z",
+      "read": false
+    },
+    {
+      "id": "89016ff1-5b46-4e6f-99c9-b4236d5436aa",
+      "type": "security",
+      "title": "Login Success",
+      "message": "Admin login from IP: 202.179.159.94",
+      "ip": "202.179.159.94",
+      "metadata": null,
+      "timestamp": "2026-02-16T15:51:34.061Z",
+      "read": false
+    },
     {
       "id": "7ec2c56f-f6ae-49ef-b7b2-bf05a5ac22c1",
       "type": "info",

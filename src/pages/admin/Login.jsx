@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import { adminJsonFetch } from '../../utils/adminApi';
+import { useDeviceProfile } from '../../context/DeviceProfileContext';
 
 const Login = () => {
+    const { perfMode } = useDeviceProfile();
+    const isLite = perfMode === 'lite';
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +38,9 @@ const Login = () => {
         <div className="min-h-screen bg-[#0a192f] flex items-center justify-center relative overflow-hidden p-4 pt-[calc(env(safe-area-inset-top,0)+1rem)] pb-[calc(env(safe-area-inset-bottom,0)+1rem)]">
             {/* Background Effects */}
             <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
-            <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px]"></div>
+            {!isLite && (
+                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px]"></div>
+            )}
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -56,6 +61,8 @@ const Login = () => {
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Username</label>
                         <input
                             type="text"
+                            name="username"
+                            autoComplete="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full bg-[#0a192f]/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-secondary transition-colors"
@@ -66,6 +73,8 @@ const Login = () => {
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
+                                name="password"
+                                autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full bg-[#0a192f]/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-secondary transition-colors pr-10"

@@ -1,19 +1,25 @@
 import { motion } from 'framer-motion';
 import { Mail, Instagram, ArrowUpRight } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
+import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
 
 const Reviews = () => {
     const { content } = useContent();
+    const { perfMode, isTouch } = useDeviceProfile();
+    const isLite = perfMode === 'lite';
+    const enableHoverFx = !isLite && !isTouch;
 
     if (!content) return null;
     const { reviews, social } = content;
 
     return (
-        <section id="about" className="py-32 px-6 bg-gradient-to-b from-background to-[#112240] relative overflow-hidden will-change-transform">
+        <section className={`py-32 px-6 bg-gradient-to-b from-background to-[#112240] relative overflow-hidden ${isLite ? '' : 'will-change-transform'}`}>
 
             {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
+            {!isLite && (
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
+            )}
 
             <div className="max-w-7xl mx-auto">
                 {/* Reviews */}
@@ -29,13 +35,13 @@ const Reviews = () => {
                                 initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                                whileHover={{
+                                whileHover={enableHoverFx ? {
                                     y: -10,
                                     borderColor: 'rgba(100, 255, 218, 0.3)',
                                     boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)',
                                     transition: { duration: 0.2, delay: 0 }
-                                }}
-                                className="p-10 bg-background/50 backdrop-blur-sm rounded-3xl border border-white/5 relative group cursor-default"
+                                } : undefined}
+                                className={`p-10 bg-background/50 ${isLite ? '' : 'backdrop-blur-sm'} rounded-3xl border border-white/5 relative group cursor-default`}
                             >
                                 <div className="absolute top-8 right-8 text-primary/20 text-7xl font-serif leading-none">"</div>
                                 <div className="flex items-center gap-4 mb-8">

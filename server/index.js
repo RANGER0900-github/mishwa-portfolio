@@ -25,12 +25,23 @@ const supabaseKey =
     process.env.VITE_SUPABASE_ANON_KEY ||
     '';
 const supabase = createClient(supabaseUrl, supabaseKey);
+const SUPABASE_CONFIGURED = Boolean(supabaseUrl && supabaseKey);
+
+// Useful for local E2E debugging: keep analytics traffic out of Supabase.
+const ANALYTICS_STORAGE_MODE = String(process.env.ANALYTICS_STORAGE_MODE || '').trim().toLowerCase();
+const SUPABASE_ANALYTICS_DISABLED =
+    ANALYTICS_STORAGE_MODE === 'local' ||
+    String(process.env.DISABLE_SUPABASE_ANALYTICS || '').trim().toLowerCase() === 'true';
+const SUPABASE_ANALYTICS_ENABLED = SUPABASE_CONFIGURED && !SUPABASE_ANALYTICS_DISABLED;
 
 const app = express();
 const PORT = process.env.PORT || process.env.SERVER_PORT || 3000;
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
+// Allow overriding DB path for local debugging / E2E runs (keeps repo DB clean).
+const DB_PATH = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : path.join(__dirname, 'data', 'db.json');
 const DIST_PATH = path.join(__dirname, '..', 'dist');
 const HAS_DIST = fs.existsSync(DIST_PATH);
+const INDEX_HTML_PATH = path.join(DIST_PATH, 'index.html');
+const INDEX_HTML_TEMPLATE = HAS_DIST ? fs.readFileSync(INDEX_HTML_PATH, 'utf8') : '';
 
 // Trust proxy for production
 app.set('trust proxy', true);
@@ -73,6 +84,55 @@ const validateUrl = (url) => {
 const sanitizeString = (str, maxLength = 500) => {
     if (typeof str !== 'string') return '';
     return str.substring(0, maxLength).trim();
+};
+
+const slugify = (value, { maxLength = 80 } = {}) => {
+    const raw = sanitizeString(String(value || ''), 200).toLowerCase();
+    const cleaned = raw
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '');
+    return cleaned.slice(0, maxLength).replace(/-+$/g, '');
+};
+
+const isValidSlug = (value) => typeof value === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+
+const ensureProjectSlugs = (content) => {
+    if (!content?.projects || !Array.isArray(content.projects)) return { content, changed: false };
+    const used = new Set();
+    let changed = false;
+
+    content.projects = content.projects.map((project) => {
+        if (!project || typeof project !== 'object') return project;
+        const idSuffix = project.id ? `-${project.id}` : '';
+        let slug = project.slug && isValidSlug(project.slug) ? project.slug : slugify(project.title || `project${idSuffix}`);
+        if (!slug) slug = `project${idSuffix || ''}`.replace(/^-/, '');
+
+        let candidate = slug;
+        if (used.has(candidate)) {
+            candidate = `${candidate}${idSuffix}`;
+        }
+        if (!candidate || used.has(candidate)) {
+            candidate = `${slug || 'project'}${idSuffix || `-${crypto.randomUUID().slice(0, 8)}`}`;
+        }
+
+        used.add(candidate);
+        if (project.slug !== candidate) {
+            changed = true;
+            return { ...project, slug: candidate };
+        }
+        return project;
+    });
+
+    return { content, changed };
+};
+
+const normalizePublicSiteUrl = (value) => {
+    const raw = sanitizeString(String(value || ''), 300);
+    if (!raw) return '';
+    const withProto = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+    return withProto.replace(/\/+$/, '');
 };
 
 // Storage configuration (Redis + in-memory fallback)
@@ -170,6 +230,8 @@ const NOSQL_OPERATOR_KEYS = new Set([
 
 // Security headers
 app.use((req, res, next) => {
+    const nonce = crypto.randomBytes(16).toString('base64');
+    res.locals.cspNonce = nonce;
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -178,9 +240,8 @@ app.use((req, res, next) => {
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
-    res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; frame-ancestors 'none';"
+    res.setHeader('Content-Security-Policy',
+        `default-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://ip-api.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'nonce-${nonce}'; frame-ancestors 'none';`
     );
     next();
 });
@@ -302,10 +363,11 @@ const escapeHtml = (value) => String(value ?? '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const renderBlockedPage = ({ reason, blockedUntil, remainingMs }) => {
+const renderBlockedPage = ({ reason, blockedUntil, remainingMs, nonce }) => {
     const safeReason = escapeHtml(reason || 'Suspicious traffic was detected from your network.');
     const blockedUntilIso = new Date(blockedUntil || Date.now()).toISOString();
     const remainingSeconds = Math.max(1, Math.ceil((remainingMs || 0) / 1000));
+    const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
 
     return `<!doctype html>
 <html lang="en">
@@ -411,7 +473,7 @@ const renderBlockedPage = ({ reason, blockedUntil, remainingMs }) => {
       <div id="appeal-result" class="msg"></div>
     </form>
   </section>
-  <script>
+  <script${safeNonce}>
     (function () {
       const timerEl = document.getElementById('timer');
       const until = new Date(timerEl.dataset.until).getTime();
@@ -591,7 +653,8 @@ const rateLimiter = async (req, res, next) => {
         return res.status(403).type('html').send(renderBlockedPage({
             reason: blockStatus.reason,
             blockedUntil: blockStatus.blockedUntil,
-            remainingMs: blockStatus.remainingMs
+            remainingMs: blockStatus.remainingMs,
+            nonce: res.locals?.cspNonce || ''
         }));
     }
 
@@ -746,7 +809,17 @@ app.use(sanitizeInput);
 
 // Serve static files from the React build
 if (HAS_DIST) {
-    app.use(express.static(DIST_PATH));
+    app.use(express.static(DIST_PATH, {
+        index: false,
+        setHeaders: (res, filePath) => {
+            // Cache hashed build assets aggressively; keep everything else short-lived.
+            if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            } else {
+                res.setHeader('Cache-Control', 'public, max-age=300');
+            }
+        }
+    }));
 }
 
 // Helper to read/write local DB
@@ -767,7 +840,10 @@ const readDB = () => {
         };
     }
 };
-const writeDB = (data) => fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+const writeDB = (data) => {
+    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+};
 
 // Initialize notifications array if not exists
 const initializeDB = () => {
@@ -780,6 +856,9 @@ const initializeDB = () => {
     if (!db.analytics.profileOverrides || typeof db.analytics.profileOverrides !== 'object') db.analytics.profileOverrides = {};
     if (!db.analytics.clearedAt) db.analytics.clearedAt = null;
     if (!Array.isArray(db.contentHistory)) db.contentHistory = [];
+    if (!db.content || typeof db.content !== 'object') db.content = {};
+    const slugResult = ensureProjectSlugs(db.content);
+    db.content = slugResult.content;
     if (!db.security || typeof db.security !== 'object') db.security = { blockedIps: {}, appeals: [] };
     if (!db.security.blockedIps || typeof db.security.blockedIps !== 'object') db.security.blockedIps = {};
     if (!Array.isArray(db.security.appeals)) db.security.appeals = [];
@@ -1403,6 +1482,10 @@ const buildIpSearchSummary = (visits, query) => {
 const getCacheKey = ({ clearedAt, from, to }) => `${clearedAt || 'all'}:${from || 'none'}:${to || 'none'}`;
 
 const fetchSupabaseVisits = async ({ clearedAt, from, to }) => {
+    if (!SUPABASE_ANALYTICS_ENABLED) {
+        analyticsCache = { key: 'disabled', timestamp: Date.now(), visits: [] };
+        return [];
+    }
     const cacheKey = getCacheKey({ clearedAt, from, to });
     if (analyticsCache.key === cacheKey && Date.now() - analyticsCache.timestamp < 15000) {
         return analyticsCache.visits;
@@ -1658,26 +1741,36 @@ app.get('/api/content', (req, res) => {
 app.get('/sitemap.xml', (req, res) => {
     try {
         const db = readDB();
-        const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
+        const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
+        const baseUrl = configuredBase || normalizePublicSiteUrl(`${req.protocol}://${req.get('host')}`);
+        const lastmod = String(db.contentHistory?.[0]?.timestamp || new Date().toISOString()).split('T')[0];
         
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${baseUrl}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/reels</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
 `;
 
         // Add all projects to sitemap
         if (db.content?.projects && Array.isArray(db.content.projects)) {
             db.content.projects.forEach(project => {
+                const slug = project?.slug && isValidSlug(project.slug) ? project.slug : slugify(project?.title || project?.id || '');
+                if (!slug) return;
                 xml += `  <url>
-    <loc>${baseUrl}/project/${project.id}</loc>
-    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <loc>${baseUrl}/project/${slug}</loc>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
 `;
             });
@@ -1695,9 +1788,12 @@ app.get('/sitemap.xml', (req, res) => {
 
 // Robots.txt for SEO
 app.get('/robots.txt', (req, res) => {
-    const baseUrl = process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
+    const baseUrl = configuredBase || normalizePublicSiteUrl(`${req.protocol}://${req.get('host')}`);
     const robotsTxt = `User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
@@ -1764,7 +1860,8 @@ app.post('/api/content', validateAdminToken, (req, res) => {
             db.contentHistory = db.contentHistory.slice(0, CONTENT_HISTORY_LIMIT);
         }
 
-        db.content = { ...db.content, ...content };
+        const slugResult = ensureProjectSlugs(content);
+        db.content = { ...db.content, ...slugResult.content };
         writeDB(db);
         logNotification('info', 'Content Updated', `Website content was modified via CMS from ${ip}`, ip);
         res.json({ success: true, content: db.content });
@@ -1815,7 +1912,9 @@ app.post('/api/content/history/:id/rollback', validateAdminToken, (req, res) => 
             db.contentHistory = db.contentHistory.slice(0, CONTENT_HISTORY_LIMIT);
         }
 
-        db.content = JSON.parse(JSON.stringify(target.content));
+        const restored = JSON.parse(JSON.stringify(target.content));
+        const slugResult = ensureProjectSlugs(restored);
+        db.content = slugResult.content;
         writeDB(db);
         logNotification('warning', 'Content Rolled Back', `Content reverted to snapshot ${req.params.id}`, getClientIP(req));
         res.json({ success: true, content: db.content });
@@ -2049,49 +2148,53 @@ app.post('/api/track', async (req, res) => {
             return res.json({ success: true, visitId: recentLocal.id, source: 'local_recent' });
         }
 
-        // Try to insert into Supabase; if it fails, fall back to local DB
-        try {
-            const { data: recentSupabase } = await supabase
-                .from('visitors')
-                .select('id, created_at, page_viewed')
-                .eq('ip', clientIP)
-                .order('created_at', { ascending: false })
-                .limit(1);
+        if (SUPABASE_ANALYTICS_ENABLED) {
+            // Try to insert into Supabase; if it fails, fall back to local DB.
+            try {
+                const { data: recentSupabase } = await supabase
+                    .from('visitors')
+                    .select('id, created_at, page_viewed')
+                    .eq('ip', clientIP)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
 
-            const latestVisit = recentSupabase?.[0];
-            const latestCreatedAtMs = toTimestampMs(latestVisit?.created_at);
-            const canReuseSupabaseVisit = Boolean(
-                latestVisit
-                && latestCreatedAtMs
-                && !isVisitBeforeBoundary(latestVisit.created_at, clearedAt)
-                && (now - latestCreatedAtMs) < (30 * 60 * 1000)
-            );
+                const latestVisit = recentSupabase?.[0];
+                const latestCreatedAtMs = toTimestampMs(latestVisit?.created_at);
+                const canReuseSupabaseVisit = Boolean(
+                    latestVisit
+                    && latestCreatedAtMs
+                    && !isVisitBeforeBoundary(latestVisit.created_at, clearedAt)
+                    && (now - latestCreatedAtMs) < (30 * 60 * 1000)
+                );
 
-            if (canReuseSupabaseVisit) {
-                if (pageViewed && pageViewed !== latestVisit.page_viewed) {
-                    await supabase.from('visitors').update({ page_viewed: pageViewed }).eq('id', latestVisit.id);
+                if (canReuseSupabaseVisit) {
+                    if (pageViewed && pageViewed !== latestVisit.page_viewed) {
+                        await supabase.from('visitors').update({ page_viewed: pageViewed }).eq('id', latestVisit.id);
+                    }
+                    analyticsCache = { timestamp: 0, key: '', visits: [] };
+                    persistVisitProfileOverride(latestVisit.id, profileOverride);
+                    return res.json({ success: true, visitId: latestVisit.id, source: 'supabase_recent' });
                 }
-                analyticsCache = { timestamp: 0, key: '', visits: [] };
-                persistVisitProfileOverride(latestVisit.id, profileOverride);
-                return res.json({ success: true, visitId: latestVisit.id, source: 'supabase_recent' });
-            }
 
-            const { data, error } = await supabase.from('visitors').insert([visitorData]).select().single();
-            if (error || !data) throw error || new Error('No data');
-            analyticsCache = { timestamp: 0, key: '', visits: [] };
-            persistVisitProfileOverride(data.id, profileOverride);
-            return res.json({ success: true, visitId: data.id, source: 'supabase' });
-        } catch (err) {
-            // Supabase failed or not configured — store locally but avoid duplicates
-            const localVisit = { id: Date.now().toString(), timestamp: new Date().toISOString(), ...visitorData, ...profileOverride };
-            db.analytics.visits.push(localVisit);
-            // Keep list length limited
-            if (db.analytics.visits.length > 2000) db.analytics.visits = db.analytics.visits.slice(-2000);
-            writeDB(db);
-            analyticsCache = { timestamp: 0, key: '', visits: [] };
-            persistVisitProfileOverride(localVisit.id, profileOverride);
-            return res.json({ success: true, visitId: localVisit.id, source: 'local' });
+                const { data, error } = await supabase.from('visitors').insert([visitorData]).select().single();
+                if (error || !data) throw error || new Error('No data');
+                analyticsCache = { timestamp: 0, key: '', visits: [] };
+                persistVisitProfileOverride(data.id, profileOverride);
+                return res.json({ success: true, visitId: data.id, source: 'supabase' });
+            } catch (err) {
+                // Continue to local fallback below.
+            }
         }
+
+        // Supabase analytics disabled or failed - store locally but avoid duplicates.
+        const localVisit = { id: Date.now().toString(), timestamp: new Date().toISOString(), ...visitorData, ...profileOverride };
+        db.analytics.visits.push(localVisit);
+        // Keep list length limited
+        if (db.analytics.visits.length > 2000) db.analytics.visits = db.analytics.visits.slice(-2000);
+        writeDB(db);
+        analyticsCache = { timestamp: 0, key: '', visits: [] };
+        persistVisitProfileOverride(localVisit.id, profileOverride);
+        return res.json({ success: true, visitId: localVisit.id, source: 'local' });
     } catch (error) {
         console.error("Tracking Error:", error);
         reportServerError('Tracking Error', error, req);
@@ -2129,9 +2232,11 @@ app.post('/api/track/page', async (req, res) => {
         writeDB(db);
         analyticsCache = { timestamp: 0, key: '', visits: [] };
 
-        const { error } = await supabase.from('visitors').update({ page_viewed: pageViewed }).eq('id', visitId);
-        if (error) {
-            logNotification('warning', 'Page Tracking Sync Warning', `Failed to sync page path to Supabase: ${error.message}`, null);
+        if (SUPABASE_ANALYTICS_ENABLED) {
+            const { error } = await supabase.from('visitors').update({ page_viewed: pageViewed }).eq('id', visitId);
+            if (error) {
+                logNotification('warning', 'Page Tracking Sync Warning', `Failed to sync page path to Supabase: ${error.message}`, null);
+            }
         }
 
         return res.json({ success: true });
@@ -2165,14 +2270,17 @@ app.post('/api/track/heartbeat', async (req, res) => {
 
         db.analytics.sessionDurations[visitId] = duration;
 
-        const { error } = await supabase.from('visitors').update({ session_duration: duration }).eq('id', visitId);
+        const idx = db.analytics.visits.findIndex(v => v.id === visitId);
+        if (idx !== -1) {
+            db.analytics.visits[idx].session_duration = duration;
+        }
 
-        if (error) {
-            const idx = db.analytics.visits.findIndex(v => v.id === visitId);
-            if (idx !== -1) {
-                db.analytics.visits[idx].session_duration = duration;
+        if (SUPABASE_ANALYTICS_ENABLED) {
+            const { error } = await supabase.from('visitors').update({ session_duration: duration }).eq('id', visitId);
+
+            if (error) {
+                logNotification('warning', 'Heartbeat Sync Warning', `Failed to sync session duration to Supabase: ${error.message}`, null);
             }
-            logNotification('warning', 'Heartbeat Sync Warning', `Failed to sync session duration to Supabase: ${error.message}`, null);
         }
         writeDB(db);
         analyticsCache = { timestamp: 0, key: '', visits: [] };
@@ -2194,7 +2302,13 @@ app.post('/api/track/reel', async (req, res) => {
         if (!db.analytics.reelClicks) db.analytics.reelClicks = {};
         db.analytics.reelClicks[reelId] = (db.analytics.reelClicks[reelId] || 0) + 1;
         if (visitId) {
-            await supabase.from('visitors').update({ reel_id: reelId }).eq('id', visitId);
+            const localIndex = db.analytics.visits.findIndex((visit) => String(visit.id) === String(visitId));
+            if (localIndex !== -1) {
+                db.analytics.visits[localIndex].reel_id = reelId;
+            }
+            if (SUPABASE_ANALYTICS_ENABLED) {
+                await supabase.from('visitors').update({ reel_id: reelId }).eq('id', visitId);
+            }
         }
         writeDB(db);
         analyticsCache = { timestamp: 0, key: '', visits: [] };
@@ -2394,6 +2508,7 @@ app.post('/api/settings/password', validateAdminToken, async (req, res) => {
 });
 
 const countSupabaseVisitors = async ({ from = null } = {}) => {
+    if (!SUPABASE_ANALYTICS_ENABLED) return 0;
     let query = supabase.from('visitors').select('id', { count: 'exact', head: true });
     if (from) {
         query = query.gte('created_at', from);
@@ -2404,6 +2519,7 @@ const countSupabaseVisitors = async ({ from = null } = {}) => {
 };
 
 const deleteSupabaseVisitorsInBatches = async () => {
+    if (!SUPABASE_ANALYTICS_ENABLED) return 0;
     let totalProcessed = 0;
     for (let i = 0; i < 200; i += 1) {
         const { data, error } = await supabase
@@ -2432,12 +2548,14 @@ app.get('/api/settings/analytics-count', validateAdminToken, async (_req, res) =
         const db = readDB();
         const clearedAt = db.analytics?.clearedAt || null;
         let supabaseCount = 0;
-        let supabaseAvailable = true;
+        let supabaseAvailable = SUPABASE_ANALYTICS_ENABLED;
 
-        try {
-            supabaseCount = await countSupabaseVisitors({ from: clearedAt });
-        } catch (error) {
-            supabaseAvailable = false;
+        if (SUPABASE_ANALYTICS_ENABLED) {
+            try {
+                supabaseCount = await countSupabaseVisitors({ from: clearedAt });
+            } catch (error) {
+                supabaseAvailable = false;
+            }
         }
 
         const localCount = filterVisitsByTimeWindow((db.analytics?.visits || []).map(mapLocalVisit), { clearedAt }).length;
@@ -2456,7 +2574,7 @@ app.post('/api/settings/clear-analytics', validateAdminToken, async (req, res) =
         let supabaseCleared = false;
         let supabaseErrorMessage = null;
         let deletedRows = 0;
-        const hasSupabaseServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+        const hasSupabaseServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) && SUPABASE_ANALYTICS_ENABLED;
 
         if (hasSupabaseServiceRole) {
             try {
@@ -2653,7 +2771,303 @@ app.use((error, req, res, _next) => {
     res.status(500).json({ error: 'Unexpected server error' });
 });
 
-// Handles any requests that don't match the API routes by sending back the main index.html file
+const getPublicSiteUrlForRequest = (req) => {
+    const configuredBase = normalizePublicSiteUrl(process.env.PUBLIC_SITE_URL || process.env.PUBLIC_BASE_URL);
+    if (configuredBase) return configuredBase;
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const proto = forwardedProto || req.protocol || 'http';
+    return normalizePublicSiteUrl(`${proto}://${req.get('host')}`);
+};
+
+const resolveAbsoluteUrl = (baseUrl, url) => {
+    const raw = sanitizeString(String(url || ''), 600);
+    if (!raw) return '';
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    if (raw.startsWith('//')) return `https:${raw}`;
+    if (!raw.startsWith('/')) return `${baseUrl}/${raw}`;
+    return `${baseUrl}${raw}`;
+};
+
+const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
+    const safeBase = baseUrl || '';
+    const normalizedPath = pathName && pathName !== '/' ? String(pathName).replace(/\/+$/, '') : '/';
+    const canonical = normalizedPath === '/' ? safeBase : `${safeBase}${normalizedPath}`;
+    const ogFallbackImage = `${safeBase}/images/mishwa_portrait.png`;
+
+    const name = 'Mishwa';
+    const siteName = 'Mishwa Portfolio';
+    const jobTitle = 'Video Editor & Visual Artist';
+    const location = 'Surat, Gujarat, India';
+    const socials = content?.social || {};
+    const sameAs = [socials.instagram, socials.youtube, socials.twitter].filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim());
+
+    const baseJsonLd = [
+        {
+            '@context': 'https://schema.org',
+            '@type': 'Person',
+            name,
+            url: safeBase,
+            jobTitle,
+            description: `${name} is a ${location}-based video editor & visual artist specializing in high-retention Instagram Reels and cinematic storytelling.`,
+            homeLocation: { '@type': 'Place', name: location },
+            sameAs
+        },
+        {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: siteName,
+            url: safeBase
+        }
+    ];
+
+    if (normalizedPath.startsWith('/admin')) {
+        return {
+            statusCode: 200,
+            title: `Admin | ${name}`,
+            description: 'Admin panel (private).',
+            canonical,
+            robots: 'noindex,nofollow',
+            og: {
+                type: 'website',
+                site_name: siteName,
+                url: canonical,
+                title: `Admin | ${name}`,
+                description: 'Admin panel (private).',
+                image: ogFallbackImage
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title: `Admin | ${name}`,
+                description: 'Admin panel (private).',
+                image: ogFallbackImage
+            },
+            jsonLd: baseJsonLd
+        };
+    }
+
+    if (normalizedPath === '/reels') {
+        const title = `Archives | ${name} Video Editor Portfolio`;
+        const description = `${name}'s reel archives: high-retention Instagram Reels, edits by category, and cinematic storytelling work.`;
+        return {
+            statusCode: 200,
+            title,
+            description,
+            canonical,
+            robots: 'index,follow',
+            og: {
+                type: 'website',
+                site_name: siteName,
+                url: canonical,
+                title,
+                description,
+                image: ogFallbackImage
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title,
+                description,
+                image: ogFallbackImage
+            },
+            jsonLd: [
+                ...baseJsonLd,
+                {
+                    '@context': 'https://schema.org',
+                    '@type': 'WebPage',
+                    name: title,
+                    url: canonical,
+                    description,
+                    isPartOf: { '@type': 'WebSite', name: siteName, url: safeBase }
+                }
+            ]
+        };
+    }
+
+    const projectMatch = normalizedPath.match(/^\/project\/([^/]+)$/);
+    if (projectMatch) {
+        const slug = decodeURIComponent(projectMatch[1] || '').trim().toLowerCase();
+        const projects = Array.isArray(content?.projects) ? content.projects : [];
+        const project = projects.find((p) => String(p?.slug || '').toLowerCase() === slug) || projects.find((p) => String(p?.id || '') === slug);
+
+        if (!project) {
+            const title = `Project Not Found | ${name} Portfolio`;
+            const description = `The requested project was not found. Browse ${name}'s reels and portfolio work.`;
+            return {
+                statusCode: 404,
+                title,
+                description,
+                canonical,
+                robots: 'noindex,nofollow',
+                og: {
+                    type: 'website',
+                    site_name: siteName,
+                    url: canonical,
+                    title,
+                    description,
+                    image: ogFallbackImage
+                },
+                twitter: {
+                    card: 'summary_large_image',
+                    title,
+                    description,
+                    image: ogFallbackImage
+                },
+                jsonLd: baseJsonLd
+            };
+        }
+
+        const projTitle = sanitizeString(project.title || 'Project', 120);
+        const category = sanitizeString(project.category || '', 80);
+        const title = `${projTitle}${category ? ` (${category})` : ''} | ${name} Video Editor`;
+        const description = sanitizeString(
+            project.seoDescription ||
+            `Watch "${projTitle}" ${category ? `(${category}) ` : ''}edited by ${name}, a ${location}-based video editor specializing in high-retention Reels and cinematic storytelling.`,
+            180
+        );
+        const image = resolveAbsoluteUrl(safeBase, project.image) || ogFallbackImage;
+        const url = canonical;
+
+        return {
+            statusCode: 200,
+            title,
+            description,
+            canonical: url,
+            robots: 'index,follow',
+            og: {
+                type: 'article',
+                site_name: siteName,
+                url,
+                title,
+                description,
+                image
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title,
+                description,
+                image
+            },
+            jsonLd: [
+                ...baseJsonLd,
+                {
+                    '@context': 'https://schema.org',
+                    '@type': 'CreativeWork',
+                    name: projTitle,
+                    description,
+                    url,
+                    image,
+                    genre: category || undefined,
+                    creator: { '@type': 'Person', name, url: safeBase }
+                }
+            ]
+        };
+    }
+
+    if (normalizedPath !== '/') {
+        const title = `Page Not Found | ${name} Portfolio`;
+        const description = `The requested page was not found. Visit ${name}'s portfolio home or reel archives.`;
+        return {
+            statusCode: 404,
+            title,
+            description,
+            canonical,
+            robots: 'noindex,nofollow',
+            og: {
+                type: 'website',
+                site_name: siteName,
+                url: canonical,
+                title,
+                description,
+                image: ogFallbackImage
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title,
+                description,
+                image: ogFallbackImage
+            },
+            jsonLd: baseJsonLd
+        };
+    }
+
+    const title = `${name} | Surat Video Editor Portfolio`;
+    const description = `${name} is a Surat-based video editor & visual artist. Explore high-retention Instagram Reels, cinematic edits, and portfolio work.`;
+    return {
+        statusCode: 200,
+        title,
+        description,
+        canonical,
+        robots: 'index,follow',
+        og: {
+            type: 'website',
+            site_name: siteName,
+            url: canonical,
+            title,
+            description,
+            image: ogFallbackImage
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            image: ogFallbackImage
+        },
+        jsonLd: [
+            ...baseJsonLd,
+            {
+                '@context': 'https://schema.org',
+                '@type': 'WebPage',
+                name: title,
+                url: canonical,
+                description,
+                isPartOf: { '@type': 'WebSite', name: siteName, url: safeBase }
+            }
+        ]
+    };
+};
+
+const renderSeoMetaBlock = (seo, nonce) => {
+    const keywords = 'Mishwa portfolio, Mishwa Surat, video editor portfolio, Surat video editor, Instagram Reels editor, reels portfolio, cinematic editor';
+    const safeNonce = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
+    const jsonLd = Array.isArray(seo.jsonLd) && seo.jsonLd.length > 0 ? JSON.stringify(seo.jsonLd) : '';
+
+    return [
+        '<!--__SEO_START__-->',
+        `<title>${escapeHtml(seo.title || '')}</title>`,
+        `<meta name="description" content="${escapeHtml(seo.description || '')}" />`,
+        `<meta name="keywords" content="${escapeHtml(keywords)}" />`,
+        '<meta name="author" content="Mishwa" />',
+        `<meta name="robots" content="${escapeHtml(seo.robots || 'index,follow')}" />`,
+        `<link rel="canonical" href="${escapeHtml(seo.canonical || '')}" />`,
+        '',
+        '<meta property="og:type" content="' + escapeHtml(seo.og?.type || 'website') + '" />',
+        '<meta property="og:site_name" content="' + escapeHtml(seo.og?.site_name || 'Mishwa Portfolio') + '" />',
+        '<meta property="og:url" content="' + escapeHtml(seo.og?.url || seo.canonical || '') + '" />',
+        '<meta property="og:title" content="' + escapeHtml(seo.og?.title || seo.title || '') + '" />',
+        '<meta property="og:description" content="' + escapeHtml(seo.og?.description || seo.description || '') + '" />',
+        '<meta property="og:image" content="' + escapeHtml(seo.og?.image || '') + '" />',
+        '',
+        '<meta name="twitter:card" content="' + escapeHtml(seo.twitter?.card || 'summary_large_image') + '" />',
+        '<meta name="twitter:title" content="' + escapeHtml(seo.twitter?.title || seo.title || '') + '" />',
+        '<meta name="twitter:description" content="' + escapeHtml(seo.twitter?.description || seo.description || '') + '" />',
+        '<meta name="twitter:image" content="' + escapeHtml(seo.twitter?.image || '') + '" />',
+        jsonLd ? `<script type="application/ld+json"${safeNonce}>${jsonLd}</script>` : '',
+        '<!--__SEO_END__-->'
+    ].filter(Boolean).join('\n');
+};
+
+const injectSeoIntoHtml = (html, seoBlock) => {
+    if (!html || typeof html !== 'string') return html;
+    const start = '<!--__SEO_START__-->';
+    const end = '<!--__SEO_END__-->';
+    const startIdx = html.indexOf(start);
+    const endIdx = html.indexOf(end);
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        return html.slice(0, startIdx) + seoBlock + html.slice(endIdx + end.length);
+    }
+    return html.replace('</head>', `${seoBlock}\n</head>`);
+};
+
+// Handles any requests that don't match the API routes by sending back the main index.html file (with SEO injected).
 app.get(/.*/, (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'API route not found' });
@@ -2662,8 +3076,23 @@ app.get(/.*/, (req, res) => {
     if (!HAS_DIST) {
         return res.status(404).send('Frontend build not found. Run `npm run build` before starting the production server.');
     }
+    // Avoid returning HTML for obvious file requests that missed static middleware.
+    if (req.path.includes('.') && !req.path.endsWith('.html')) {
+        return res.status(404).send('Not found');
+    }
 
-    res.sendFile(path.join(DIST_PATH, 'index.html'));
+    const db = readDB();
+    const baseUrl = getPublicSiteUrlForRequest(req);
+    const seo = buildSeoForRequest({ pathName: req.path, baseUrl, content: db.content || {} });
+    const nonce = res.locals?.cspNonce || '';
+    const seoBlock = renderSeoMetaBlock(seo, nonce);
+    const html = injectSeoIntoHtml(INDEX_HTML_TEMPLATE, seoBlock);
+
+    if (String(seo.robots || '').includes('noindex')) {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(seo.statusCode || 200).send(html);
 });
 
 process.on('unhandledRejection', (reason) => {
@@ -2681,6 +3110,8 @@ app.listen(PORT, () => {
     console.log('Security middleware active (rate limiting, input checks, security headers).');
     console.log('Health endpoint: /api/health');
     console.log(`Supabase URL: ${supabaseUrl}`);
+    console.log(`Supabase analytics enabled: ${SUPABASE_ANALYTICS_ENABLED}`);
+    console.log(`DB path: ${DB_PATH}`);
     console.log(`Static build present: ${HAS_DIST}`);
     if (!REDIS_ENABLED) {
         console.log('Redis: disabled (set REDIS_URL to enable).');

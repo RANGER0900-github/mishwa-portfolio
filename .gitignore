@@ -20,3 +20,6 @@ dist-ssr
 # Database
 server/data/db.json
 
+# Playwright CLI artifacts
+output/
+.playwright/

@@ -3,12 +3,15 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Lenis from '@studio-freight/lenis';
 import { LoadingProvider, useLoading } from './context/LoadingContext';
 import { ContentProvider } from './context/ContentContext';
+import { DeviceProfileProvider, useDeviceProfile } from './context/DeviceProfileContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Preloader from './components/Preloader';
 import { AnimatePresence } from 'framer-motion';
 
 const Home = lazy(() => import('./pages/Home'));
 const AllReels = lazy(() => import('./pages/AllReels'));
+const Project = lazy(() => import('./pages/Project'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 const Login = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
 const ContentCMS = lazy(() => import('./pages/admin/ContentCMS'));
@@ -17,25 +20,19 @@ const Settings = lazy(() => import('./pages/admin/Settings'));
 const Notifications = lazy(() => import('./pages/admin/Notifications'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
-const createLenisConfig = () => {
-  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-
-  return {
-    duration: isTouchDevice ? 0.9 : 1.05,
-    easing: (t) => 1 - Math.pow(1 - t, 4),
-    direction: 'vertical',
-    gestureDirection: 'vertical',
-    smooth: true,
-    smoothTouch: isTouchDevice,
-    syncTouch: isTouchDevice,
-    syncTouchLerp: 0.11,
-    touchMultiplier: isTouchDevice ? 1.08 : 1,
-    wheelMultiplier: isTouchDevice ? 0.9 : 0.95,
-    infinite: false,
-    // Keep nested scrollable areas (tables/modals/dropdowns) native.
-    prevent: (node) => node?.closest?.('[data-lenis-prevent]') ?? false
-  };
-};
+const createLenisConfig = () => ({
+  // Lenis v1.0.42 options (see node_modules/@studio-freight/lenis/README.md)
+  duration: 1.05,
+  easing: (t) => 1 - Math.pow(1 - t, 4),
+  orientation: 'vertical',
+  gestureOrientation: 'vertical',
+  smoothWheel: true,
+  syncTouch: false,
+  wheelMultiplier: 0.95,
+  touchMultiplier: 1,
+  autoResize: true,
+  infinite: false
+});
 
 const MainContent = () => {
   const { isLoading } = useLoading();
@@ -65,6 +62,7 @@ const MainContent = () => {
   // Track one session per tab and keep its duration updated
   useEffect(() => {
     if (isLoading || visitIdState) return;
+    if (location.pathname.startsWith('/admin')) return;
 
     fetch('/api/track', {
       method: 'POST',
@@ -90,6 +88,7 @@ const MainContent = () => {
   // Update visited page path within the active session
   useEffect(() => {
     if (isLoading || !visitIdState) return;
+    if (location.pathname.startsWith('/admin')) return;
 
     fetch('/api/track/page', {
       method: 'POST',
@@ -169,6 +168,7 @@ const MainContent = () => {
           <Routes location={location} key={location.pathname}>
             <Route index element={<Home />} />
             <Route path="/reels" element={<AllReels />} />
+            <Route path="/project/:slug" element={<Project />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />
@@ -179,6 +179,8 @@ const MainContent = () => {
               <Route path="settings" element={<Settings />} />
               <Route path="notifications" element={<Notifications />} />
             </Route>
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       )}
@@ -186,12 +188,20 @@ const MainContent = () => {
   );
 };
 
-function App() {
+const AppShell = () => {
+  const { perfMode, isTouch, prefersReducedMotion } = useDeviceProfile();
   const lenisRef = useRef(null);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) return undefined;
+    const enableLenis = perfMode !== 'lite' && !prefersReducedMotion && !isTouch;
+    if (!enableLenis) {
+      if (window.lenis && typeof window.lenis.destroy === 'function') {
+        window.lenis.destroy();
+      }
+      window.lenis = null;
+      lenisRef.current = null;
+      return undefined;
+    }
 
     if (window.lenis && typeof window.lenis.destroy === 'function') {
       window.lenis.destroy();
@@ -211,36 +221,42 @@ function App() {
     }
     rafId = requestAnimationFrame(raf);
 
-    const handleResize = () => {
-      lenis.resize?.();
-    };
-    window.addEventListener('resize', handleResize);
-
     return () => {
       cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', handleResize);
       lenis.destroy();
       lenisRef.current = null;
       if (window.lenis === lenis) {
         window.lenis = null;
       }
     };
-  }, []);
+  }, [isTouch, perfMode, prefersReducedMotion]);
 
   return (
-    <ErrorBoundary>
-      <Router>
-        <ContentProvider>
-          <LoadingProvider>
-            <div className="bg-background min-h-screen text-text selection:bg-secondary selection:text-background">
+    <Router>
+      <ContentProvider>
+        <LoadingProvider>
+          <div className="bg-background min-h-screen text-text selection:bg-secondary selection:text-background">
+            {perfMode !== 'lite' && (
               <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#112240] via-background to-background opacity-50"></div>
               </div>
+            )}
+            <div className="relative z-10">
               <MainContent />
             </div>
-          </LoadingProvider>
-        </ContentProvider>
-      </Router>
+          </div>
+        </LoadingProvider>
+      </ContentProvider>
+    </Router>
+  );
+};
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <DeviceProfileProvider>
+        <AppShell />
+      </DeviceProfileProvider>
     </ErrorBoundary>
   );
 }

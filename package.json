@@ -13,7 +13,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "smoke:api": "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r)=>{if(!r.ok) throw new Error('Health endpoint failed'); return r.json();}).then((d)=>{if(d.status!=='ok') throw new Error('Health payload invalid'); console.log('API smoke OK');}).catch((e)=>{console.error(e.message); process.exit(1);})\""
+    "smoke:api": "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r)=>{if(!r.ok) throw new Error('Health endpoint failed'); return r.json();}).then((d)=>{if(d.status!=='ok') throw new Error('Health payload invalid'); console.log('API smoke OK');}).catch((e)=>{console.error(e.message); process.exit(1);})\"",
+    "pw:debug": "node scripts/pw_debug.mjs"
   },
   "dependencies": {
     "@studio-freight/lenis": "^1.0.42",

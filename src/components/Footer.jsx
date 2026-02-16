@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
 import { Instagram, Youtube, Twitter, Mail } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
+import { useDeviceProfile } from '../context/DeviceProfileContext';
 import { formatExternalLink } from '../utils/linkUtils';
 
 const Footer = () => {
     const { content } = useContent();
+    const { perfMode } = useDeviceProfile();
+    const isLite = perfMode === 'lite';
 
     if (!content) return null;
     const { footer, social } = content;
@@ -45,7 +48,7 @@ const Footer = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="px-6 border-t border-white/5 bg-gradient-to-b from-[#0a192f]/80 to-black backdrop-blur-md"
+                className={`px-6 border-t border-white/5 bg-gradient-to-b from-[#0a192f]/80 to-black ${isLite ? '' : 'backdrop-blur-md'}`}
             >
                 <div className="max-w-7xl mx-auto py-12 flex flex-col md:flex-row justify-between items-center gap-8">
 
