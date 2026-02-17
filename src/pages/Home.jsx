@@ -3,6 +3,7 @@ import Work from '../components/Work';
 import Cinema from '../components/Cinema';
 import About from '../components/About';
 import Reviews from '../components/Reviews';
+import SeoContent from '../components/SeoContent';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
@@ -16,6 +17,7 @@ const Home = () => {
                 <Cinema />
                 <About />
                 <Reviews />
+                <SeoContent />
             </main>
             <Footer />
         </div>

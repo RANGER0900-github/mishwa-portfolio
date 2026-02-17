@@ -1,11 +1,39 @@
-# Coco Club Portfolio
+# Coco Club Portfolio — Mishwa Zalavadiya
 
-Official portfolio website for Mishwa Zalavadiya (Coco Club), a Surat-based video editor and visual artist.
+Official portfolio website for **Mishwa Zalavadiya** (Coco Club), a Surat-based freelance video editor and visual artist.
 
-## Focus Areas
-- High-retention Instagram Reels editing
-- Cinematic storytelling
-- Social-first video ads and brand edits
+## About
+Mishwa Zalavadiya is a professional freelance video editor based in Surat, Gujarat, India. As the founder of Coco Club, he specializes in high-retention Instagram Reels editing, cinematic storytelling, color grading, motion graphics, sound design, and social-first brand video production. Serving clients across Surat, Ahmedabad, Ankleshwar, Gujarat, and India.
+
+## Services Offered
+- **Instagram Reels Editing** — High-retention, hook-first short-form video editing with optimized pacing, sound design, and subtitle rhythm
+- **Cinematic Video Editing** — Premium cinematic storytelling with professional color grading and film-quality visual treatment
+- **Color Grading** — Professional color correction and grading using DaVinci Resolve and Adobe Premiere Pro
+- **Motion Graphics** — Custom animations, kinetic typography, logo reveals, and VFX using Adobe After Effects
+- **Sound Design & Audio Mixing** — Professional audio balancing, SFX layering, music sync, and rhythm-synchronized subtitles
+- **YouTube Video Editing** — Long-form and Shorts editing with cuts, transitions, B-roll integration, and SEO optimization
+- **TikTok Short-Form Content** — Vertical video editing with trend-aware pacing and platform-specific optimization
+- **Brand Video Ads** — Conversion-focused advertisements for Instagram, Facebook, YouTube, LinkedIn, and e-commerce
+- **E-commerce Product Videos** — Product showcases, testimonial compilations, and conversion ads
+
+## Software & Tools
+- Adobe Premiere Pro
+- Adobe After Effects
+- DaVinci Resolve
+- Final Cut Pro
+
+## Resolutions
+- 4K Ultra HD
+- 1080p Full HD
+- HD (720p+)
+- Vertical (9:16) and Horizontal (16:9) formats
+
+## Service Areas
+- Surat, Gujarat
+- Ahmedabad, Gujarat
+- Ankleshwar, Gujarat
+- All of Gujarat and India
+- Remote collaboration worldwide
 
 ## Canonical Site
 - https://mishwa.unitednodes.space
@@ -17,9 +45,17 @@ Official portfolio website for Mishwa Zalavadiya (Coco Club), a Surat-based vide
 - Cinema: https://mishwa.unitednodes.space/cinema
 - Contact: https://mishwa.unitednodes.space/contact
 - Reels Archive: https://mishwa.unitednodes.space/reels
+- Services: https://mishwa.unitednodes.space/services
+- Case Studies: https://mishwa.unitednodes.space/case-studies
+- Guides: https://mishwa.unitednodes.space/guides
 - Portfolio Profile: https://mishwa.unitednodes.space/mishwa-zalavadiya-portfolio
 - Video Editor Portfolio: https://mishwa.unitednodes.space/mishwa-zalavadiya-video-editor-portfolio
 - Surat Portfolio: https://mishwa.unitednodes.space/surat-video-editor-portfolio
+- Site Map: https://mishwa.unitednodes.space/site-map
 
 ## Contact / Social
 - Instagram: https://www.instagram.com/_thecoco_club/
+- Location: Surat, Gujarat, India
+
+## Keywords
+Mishwa Zalavadiya, Coco Club, video editor Surat, freelance video editor, Instagram reels editor, reel editor, high-retention reel editor, cinematic editor, color grading, motion graphics, sound design, brand video editor, YouTube editor, TikTok editor, short form video editor, social media video editor, video editing services, hire video editor, 4K video editor, 1080p video editor, HD video editor, Adobe Premiere Pro, After Effects, DaVinci Resolve, Final Cut Pro, Ahmedabad video editor, Ankleshwar video editor, Gujarat video editor, India video editor
