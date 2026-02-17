@@ -11,8 +11,12 @@ const SiteMap = () => {
   const coreLinks = [
     { label: 'Home', to: '/' },
     { label: 'Reels', to: '/reels' },
+    { label: 'Work', to: '/work' },
+    { label: 'Cinema', to: '/cinema' },
+    { label: 'About', to: '/about' },
+    { label: 'Contact', to: '/contact' },
     { label: 'Video Editor Portfolio', to: '/mishwa-zalavadiya-video-editor-portfolio' },
-    { label: 'Mishwa Portfolio', to: '/mishwa-zalavadiya-portfolio' },
+    { label: 'Portfolio Profile', to: '/mishwa-zalavadiya-portfolio' },
     { label: 'Surat Portfolio', to: '/surat-video-editor-portfolio' }
   ];
 

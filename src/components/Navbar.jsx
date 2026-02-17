@@ -68,8 +68,8 @@ const NavbarFull = () => {
             className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-6 px-6"
         >
             <div className="bg-background/80 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex items-center justify-between shadow-2xl w-full max-w-5xl">
-                <Link to="/" className="font-display font-bold text-xl tracking-tighter text-white">
-                    MISHWA<span className="text-secondary">.</span>
+                <Link to="/" className="font-display font-bold text-lg sm:text-xl tracking-tighter text-white">
+                    COCO CLUB<span className="text-secondary">.</span>
                 </Link>
 
                 {/* Desktop Links */}
@@ -153,8 +153,8 @@ const NavbarLite = () => {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
             <div className="bg-[#0a192f]/95 border border-white/10 rounded-full px-5 py-3 flex items-center justify-between shadow-xl w-full max-w-5xl">
-                <Link to="/" className="font-display font-bold text-xl tracking-tighter text-white">
-                    MISHWA<span className="text-secondary">.</span>
+                <Link to="/" className="font-display font-bold text-lg sm:text-xl tracking-tighter text-white">
+                    COCO CLUB<span className="text-secondary">.</span>
                 </Link>
 
                 <div className="hidden md:flex items-center gap-8">

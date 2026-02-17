@@ -431,7 +431,7 @@ const makePublicLoadRunCode = ({ baseUrl, outputDir, screenshotRel, fullPage }) 
 
     const resp = await page.goto(baseUrl + '/', { waitUntil: 'domcontentloaded' });
     if (!resp || resp.status() >= 500) throw new Error('Home failed to load.');
-    await page.waitForSelector('text=MISHWA', { timeout: 20000 });
+    await page.waitForSelector('text=COCO CLUB', { timeout: 20000 });
 
     const pre = page.locator('[data-testid="preloader"]');
     if (await pre.count()) {
@@ -461,7 +461,7 @@ const makePublicNavRunCode = ({ baseUrl, outputDir, screenshotRel, fullPage }) =
     };
 
     await goto(baseUrl + '/');
-    await page.waitForSelector('text=MISHWA', { timeout: 20000 });
+    await page.waitForSelector('text=COCO CLUB', { timeout: 20000 });
     const pre = page.locator('[data-testid="preloader"]');
     if (await pre.count()) {
       await pre.waitFor({ state: 'detached', timeout: 20000 }).catch(() => {});

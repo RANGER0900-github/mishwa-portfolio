@@ -1,6 +1,6 @@
-# Mishwa Portfolio
+# Coco Club Portfolio
 
-Official portfolio website for Mishwa Zalavadiya, a Surat-based video editor and visual artist.
+Official portfolio website for Mishwa Zalavadiya (Coco Club), a Surat-based video editor and visual artist.
 
 ## Focus Areas
 - High-retention Instagram Reels editing
@@ -12,6 +12,10 @@ Official portfolio website for Mishwa Zalavadiya, a Surat-based video editor and
 
 ## Key Pages
 - Home: https://mishwa.unitednodes.space/
+- About: https://mishwa.unitednodes.space/about
+- Work: https://mishwa.unitednodes.space/work
+- Cinema: https://mishwa.unitednodes.space/cinema
+- Contact: https://mishwa.unitednodes.space/contact
 - Reels Archive: https://mishwa.unitednodes.space/reels
 - Portfolio Profile: https://mishwa.unitednodes.space/mishwa-zalavadiya-portfolio
 - Video Editor Portfolio: https://mishwa.unitednodes.space/mishwa-zalavadiya-video-editor-portfolio

@@ -45,6 +45,7 @@ const INDEX_HTML_TEMPLATE = HAS_DIST ? fs.readFileSync(INDEX_HTML_PATH, 'utf8') 
 
 // Trust proxy for production
 app.set('trust proxy', true);
+app.disable('x-powered-by');
 
 // =====================
 // SECURITY MIDDLEWARE
@@ -421,11 +422,12 @@ const getPreferredPublicBaseUrl = (req) => {
 };
 
 const SEO_OWNER_NAME = sanitizeString(process.env.SEO_OWNER_NAME || 'Mishwa Zalavadiya', 120);
-const SEO_BRAND_NAME = sanitizeString(process.env.SEO_BRAND_NAME || 'Mishwa', 80);
+const SEO_BRAND_NAME = sanitizeString(process.env.SEO_BRAND_NAME || 'Coco Club', 80);
 const SEO_SITE_NAME = sanitizeString(process.env.SEO_SITE_NAME || `${SEO_BRAND_NAME} Portfolio`, 140);
 const SEO_LOCATION = sanitizeString(process.env.SEO_LOCATION || 'Surat, Gujarat, India', 140);
 const SEO_DEFAULT_INSTAGRAM_URL = sanitizeString(process.env.SEO_INSTAGRAM_URL || 'https://www.instagram.com/_thecoco_club/', 260);
-const SEO_DEFAULT_IMAGE_PATH = sanitizeString(process.env.SEO_DEFAULT_IMAGE || '/my-logo-circle.png', 260) || '/my-logo-circle.png';
+const SEO_LOGO_IMAGE_PATH = sanitizeString(process.env.SEO_LOGO_IMAGE || process.env.SEO_DEFAULT_IMAGE || '/my-logo-circle.png', 260) || '/my-logo-circle.png';
+const SEO_DEFAULT_IMAGE_PATH = sanitizeString(process.env.SEO_DEFAULT_IMAGE || process.env.SEO_LOGO_IMAGE || '/my-logo-circle.png', 260) || '/my-logo-circle.png';
 const SEO_PRIMARY_BRAND_ROUTE = sanitizeString(process.env.SEO_PRIMARY_BRAND_ROUTE || '/', 80) || '/';
 const SEO_INDEX_REELS = String(process.env.SEO_INDEX_REELS || 'true').trim().toLowerCase() !== 'false';
 const SEO_ENABLE_CONTENT_HUB = String(process.env.SEO_ENABLE_CONTENT_HUB || 'true').trim().toLowerCase() !== 'false';
@@ -748,6 +750,32 @@ const SEO_HUB_ROUTE_CONFIG = Object.freeze({
         title: `${SEO_OWNER_NAME} Video Editing Guides | ${SEO_LOCATION}`,
         description: `Practical guides from ${SEO_OWNER_NAME} on retention-focused reels, cinematic storytelling, hooks, pacing, and edit structure.`,
         keywords: ['video editing guide', 'instagram reels strategy guide', 'retention editing tips']
+    }
+});
+const SEO_SECTION_ROUTE_CONFIG = Object.freeze({
+    '/about': {
+        label: 'About',
+        title: `About ${SEO_OWNER_NAME} | ${SEO_BRAND_NAME} Video Editor Portfolio`,
+        description: `${SEO_OWNER_NAME} is a ${SEO_LOCATION}-based video editor behind ${SEO_BRAND_NAME}, crafting high-retention reels and cinematic edits for brands across India.`,
+        keywords: ['about mishwa zalavadiya', 'coco club video editor', 'surat video editor profile']
+    },
+    '/work': {
+        label: 'Work',
+        title: `Video Editing Work Portfolio | ${SEO_BRAND_NAME}`,
+        description: `Explore ${SEO_BRAND_NAME} editing work by ${SEO_OWNER_NAME}: retention-first reels, brand campaigns, and social-first video projects from Surat to pan-India.`,
+        keywords: ['video editing work portfolio', 'instagram reels projects', 'surat editor work samples']
+    },
+    '/cinema': {
+        label: 'Cinema',
+        title: `Cinema Projects | ${SEO_BRAND_NAME} by ${SEO_OWNER_NAME}`,
+        description: `Discover cinematic and long-form storytelling projects edited by ${SEO_OWNER_NAME}, blending pacing, mood, and visual narrative direction.`,
+        keywords: ['cinematic video editor', 'long form edit portfolio', 'storytelling video projects']
+    },
+    '/contact': {
+        label: 'Contact',
+        title: `Contact ${SEO_BRAND_NAME} | Hire ${SEO_OWNER_NAME}`,
+        description: `Start a project with ${SEO_OWNER_NAME} at ${SEO_BRAND_NAME}. Get high-retention reel editing and cinematic storytelling support for creators and brands.`,
+        keywords: ['contact mishwa zalavadiya', 'hire video editor surat', 'coco club contact']
     }
 });
 const SEO_AI_BOT_ALLOWLIST = ['GPTBot', 'OAI-SearchBot', 'Google-Extended', 'ClaudeBot', 'PerplexityBot', 'CCBot'];
@@ -2477,6 +2505,10 @@ const getSitemapRouteGroups = (db) => {
     const pageRoutes = [
         { path: '/', changefreq: 'weekly', priority: '1.0' },
         ...(SEO_INDEX_REELS ? [{ path: '/reels', changefreq: 'weekly', priority: '0.85' }] : []),
+        { path: '/about', changefreq: 'monthly', priority: '0.82' },
+        { path: '/work', changefreq: 'weekly', priority: '0.84' },
+        { path: '/cinema', changefreq: 'weekly', priority: '0.8' },
+        { path: '/contact', changefreq: 'monthly', priority: '0.75' },
         { path: '/site-map', changefreq: 'weekly', priority: '0.6' },
         ...Object.keys(SEO_LANDING_PAGES).map((pathName) => ({ path: pathName, changefreq: 'weekly', priority: '0.8' })),
         ...(SEO_ENABLE_CONTENT_HUB
@@ -2575,24 +2607,22 @@ app.get('/sitemaps/:segment.xml', (req, res) => {
 // Robots.txt for SEO
 app.get('/robots.txt', (req, res) => {
     const baseUrl = getPreferredPublicBaseUrl(req);
-    const botApiAllowPaths = [
+    const explicitAllowPaths = [
+        '/favicon.ico',
+        '/my-logo-circle.png',
+        '/favicons/',
         '/api/content',
         '/api/track',
         '/api/track/page',
         '/api/track/heartbeat',
         '/api/track/reel'
     ];
-    const botApiAllowRules = botApiAllowPaths.map((path) => `Allow: ${path}`).join('\n');
-    const aiBotDirectives = SEO_AI_BOT_ALLOWLIST.map((bot) => `User-agent: ${bot}
-Allow: /
-${botApiAllowRules}
-Disallow: /admin/
-Disallow: /api/
-`).join('\n');
+    const explicitAllowRules = explicitAllowPaths.map((path) => `Allow: ${path}`).join('\n');
+    const aiBotDirectives = SEO_AI_BOT_ALLOWLIST.map((bot) => `User-agent: ${bot}\nAllow: /`).join('\n\n');
 
     const robotsTxt = `User-agent: *
 Allow: /
-${botApiAllowRules}
+${explicitAllowRules}
 Disallow: /admin/
 Disallow: /api/
 
@@ -3646,7 +3676,7 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     const normalizedPath = pathName && pathName !== '/' ? String(pathName).replace(/\/+$/, '') : '/';
     const canonical = normalizedPath === '/' ? safeBase : `${safeBase}${normalizedPath}`;
     const ogFallbackImage = resolveAbsoluteUrl(safeBase, SEO_DEFAULT_IMAGE_PATH) || `${safeBase}/images/mishwa_portrait.png`;
-    const brandLogo = resolveAbsoluteUrl(safeBase, SEO_DEFAULT_IMAGE_PATH) || ogFallbackImage;
+    const brandLogo = resolveAbsoluteUrl(safeBase, SEO_LOGO_IMAGE_PATH) || ogFallbackImage;
 
     const name = SEO_BRAND_NAME || 'Mishwa';
     const ownerName = SEO_OWNER_NAME || name;
@@ -3824,6 +3854,32 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
             robots: 'noindex,nofollow',
             keywords: ['admin panel', `${name} admin`],
             jsonLd: baseJsonLd
+        });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(SEO_SECTION_ROUTE_CONFIG, normalizedPath)) {
+        const sectionSeo = SEO_SECTION_ROUTE_CONFIG[normalizedPath];
+        return buildSeoPayload({
+            title: sectionSeo.title,
+            description: sectionSeo.description,
+            keywords: sectionSeo.keywords,
+            breadcrumbs: [
+                { name: 'Home', url: safeBase },
+                { name: sectionSeo.label, url: canonical }
+            ],
+            faqItems: sharedFaqs.slice(0, 4),
+            jsonLd: [
+                ...baseJsonLd,
+                {
+                    '@context': 'https://schema.org',
+                    '@type': 'WebPage',
+                    name: sectionSeo.title,
+                    url: canonical,
+                    description: sectionSeo.description,
+                    isPartOf: { '@id': `${safeBase}#website` },
+                    about: { '@id': `${safeBase}#person` }
+                }
+            ]
         });
     }
 
@@ -4100,14 +4156,15 @@ const buildSeoForRequest = ({ pathName, baseUrl, content }) => {
     }
 
     const homeTitle = SEO_PRIMARY_BRAND_ROUTE === '/'
-        ? `${ownerName} - Video Editor in Surat | Official Portfolio`
+        ? `${ownerName} | Coco Club Video Editor Portfolio in Surat`
         : `${ownerName} | Surat Video Editor Portfolio`;
-    const description = `${ownerName} is a Surat-based video editor and visual artist specializing in high-retention Instagram Reels, cinematic brand storytelling, and portfolio edits for clients across India, including Ankleshwar.`;
+    const description = `${ownerName} leads Coco Club in Surat, creating high-retention Instagram Reels, cinematic edits, and social-first storytelling for brands across India.`;
     return buildSeoPayload({
         title: homeTitle,
         description,
         keywords: [
             'mishwa zalavadiya portfolio',
+            'coco club portfolio',
             'mishwa video editor portfolio',
             'surat video editor portfolio',
             'high retention reel editor',
@@ -4140,18 +4197,47 @@ const buildSeoFallbackMarkup = ({ content, baseUrl }) => {
     }).filter(Boolean);
 
     return `
-<section data-seo-fallback="true" id="seo-static-fallback" style="padding:24px 20px;max-width:980px;margin:0 auto;color:#d9ecff;background:#020c1b;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64ffda;margin:0 0 10px;">Video Editor Portfolio</p>
+<section data-seo-fallback="true" id="seo-static-fallback" style="padding:28px 20px;max-width:980px;margin:0 auto;color:#d9ecff;background:#020c1b;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#64ffda;margin:0 0 10px;">Coco Club Portfolio</p>
   <h1 style="font-size:clamp(28px,4vw,44px);line-height:1.15;margin:0 0 14px;color:#ffffff;">Mishwa Zalavadiya Video Editor Portfolio in Surat</h1>
-  <p style="font-size:17px;line-height:1.7;margin:0 0 16px;color:#9fb3c8;">Surat-based reel editor for high-retention Instagram Reels, cinematic storytelling, and social-first video campaigns.</p>
-  <h2 style="font-size:21px;line-height:1.3;margin:18px 0 10px;color:#ffffff;">Featured Video Editing Work</h2>
-  <p style="font-size:15px;line-height:1.7;margin:0 0 12px;color:#9fb3c8;">Browse project archives, category reels, and branded edits crafted for retention and conversion.</p>
-  <p style="margin:0 0 10px;font-size:14px;">
-    <a href="/reels" style="color:#64ffda;text-decoration:none;margin-right:14px;">View Reel Archives</a>
-    <a href="/surat-video-editor-portfolio" style="color:#64ffda;text-decoration:none;">Surat Video Editor Portfolio</a>
+  <p style="font-size:16px;line-height:1.75;margin:0 0 14px;color:#9fb3c8;">
+    Mishwa Zalavadiya is a Surat-based video editor and visual artist behind Coco Club. This portfolio focuses on high-retention Instagram Reels,
+    cinematic storytelling, and conversion-friendly social edits for brands, founders, and creators across India.
   </p>
+  <p style="font-size:16px;line-height:1.75;margin:0 0 14px;color:#9fb3c8;">
+    The editing workflow combines hook-first scripting, pacing optimization, subtitle rhythm, sound design, and scene sequencing to increase watch time.
+    Projects here include beauty, lifestyle, food, fitness, and travel categories, with direct archive browsing and structured project detail pages.
+  </p>
+  <p style="font-size:16px;line-height:1.75;margin:0 0 14px;color:#9fb3c8;">
+    If you searched for terms like mishwa portfolio, mishwa zalavadiya portfolio, mishwa video editor portfolio, or surat video editor portfolio,
+    this site is the official home for Coco Club work and case references.
+  </p>
+
+  <h2 style="font-size:21px;line-height:1.3;margin:18px 0 10px;color:#ffffff;">Explore Portfolio Sections</h2>
+  <ul style="margin:0 0 12px;padding-left:18px;line-height:1.7;color:#c9d6e2;">
+    <li><a href="/work" style="color:#64ffda;text-decoration:none;">Work</a> - featured reel projects with category context.</li>
+    <li><a href="/cinema" style="color:#64ffda;text-decoration:none;">Cinema</a> - long-form narrative and cinematic edits.</li>
+    <li><a href="/about" style="color:#64ffda;text-decoration:none;">About</a> - editor profile, process, and creative direction.</li>
+    <li><a href="/contact" style="color:#64ffda;text-decoration:none;">Contact</a> - project booking and collaboration details.</li>
+    <li><a href="/reels" style="color:#64ffda;text-decoration:none;">Reel Archives</a> - complete archive index by category.</li>
+    <li><a href="/services" style="color:#64ffda;text-decoration:none;">Services</a>, <a href="/case-studies" style="color:#64ffda;text-decoration:none;">Case Studies</a>, and <a href="/guides" style="color:#64ffda;text-decoration:none;">Guides</a> - deeper SEO content hubs.</li>
+  </ul>
+
+  <h2 style="font-size:21px;line-height:1.3;margin:18px 0 10px;color:#ffffff;">Service Coverage and Collaboration</h2>
+  <p style="font-size:15px;line-height:1.7;margin:0 0 12px;color:#9fb3c8;">
+    Coco Club serves clients in Surat, Ankleshwar, Ahmedabad, and remote markets across India. Most projects are handled online with milestone-based feedback,
+    ensuring consistent delivery quality for creators and growth teams. Each finished edit is optimized for platform format, content goal, and audience behavior.
+  </p>
+
+  <h2 style="font-size:21px;line-height:1.3;margin:18px 0 10px;color:#ffffff;">Workflow References</h2>
+  <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#c9d6e2;">
+    <a href="https://www.instagram.com/_thecoco_club/" style="color:#64ffda;text-decoration:none;margin-right:14px;">Instagram</a>
+    <a href="https://www.adobe.com/products/premiere.html" style="color:#64ffda;text-decoration:none;margin-right:14px;">Adobe Premiere</a>
+    <a href="https://www.facebook.com/business/instagram/reels" style="color:#64ffda;text-decoration:none;">Meta Reels</a>
+  </p>
+
   ${highlights.length > 0
-        ? `<ul style="margin:10px 0 0;padding-left:18px;line-height:1.6;color:#c9d6e2;">${highlights.join('')}</ul>`
+        ? `<h2 style="font-size:21px;line-height:1.3;margin:18px 0 10px;color:#ffffff;">Featured Projects</h2><ul style="margin:8px 0 0;padding-left:18px;line-height:1.7;color:#c9d6e2;">${highlights.join('')}</ul>`
         : ''}
   <p style="margin:14px 0 0;font-size:12px;color:#7f93a8;">Canonical: ${escapeHtml(baseUrl)}</p>
 </section>`;
@@ -4228,7 +4314,7 @@ const renderSeoMetaBlock = (seo, nonce, { includeAnalytics = false } = {}) => {
         `<meta name="description" content="${escapeHtml(seo.description || '')}" />`,
         `<meta name="keywords" content="${escapeHtml(keywords)}" />`,
         `<meta name="author" content="${escapeHtml(SEO_OWNER_NAME)}" />`,
-        '<meta name="generator" content="Mishwa Portfolio Site" />',
+        `<meta name="generator" content="${escapeHtml(SEO_SITE_NAME)}" />`,
         `<meta name="robots" content="${escapeHtml(seo.robots || 'index,follow')}" />`,
         `<link rel="canonical" href="${escapeHtml(seo.canonical || '')}" />`,
         '<meta name="geo.placename" content="' + escapeHtml(seo.geo?.placename || SEO_LOCATION) + '" />',

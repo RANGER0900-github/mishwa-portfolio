@@ -90,7 +90,7 @@ html[data-perf="lite"] .backdrop-blur-2xl {
   backdrop-filter: none !important;
 }
 
-@media (max-height: 760px) {
+@media (max-height: 860px) {
   .hero-scroll-indicator {
     display: none !important;
   }

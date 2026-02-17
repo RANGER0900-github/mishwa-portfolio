@@ -54,6 +54,10 @@ const main = async () => {
   const base = `http://127.0.0.1:${port}`;
   const urls = [
     `${base}/`,
+    `${base}/about`,
+    `${base}/contact`,
+    `${base}/work`,
+    `${base}/cinema`,
     `${base}/reels`,
     `${base}/site-map`,
     `${base}/services`,

@@ -55,7 +55,7 @@ const Footer = () => {
                             whileHover={{ color: '#64ffda' }}
                             transition={{ duration: 0.3 }}
                         >
-                            {footer.copyright || `(c) ${currentYear} MISHWA. All rights reserved.`}
+                            {footer.copyright || `(c) ${currentYear} COCO CLUB. All rights reserved.`}
                         </motion.div>
 
                         {footer.showSocial && social && (

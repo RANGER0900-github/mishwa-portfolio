@@ -11,6 +11,10 @@ import CookieConsent from './components/CookieConsent';
 const Home = lazy(() => import('./pages/Home'));
 const AllReels = lazy(() => import('./pages/AllReels'));
 const Project = lazy(() => import('./pages/Project'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const WorkPage = lazy(() => import('./pages/WorkPage'));
+const CinemaPage = lazy(() => import('./pages/CinemaPage'));
 const SeoLanding = lazy(() => import('./pages/SeoLanding'));
 const SeoHubIndex = lazy(() => import('./pages/SeoHubIndex'));
 const SeoHubDetail = lazy(() => import('./pages/SeoHubDetail'));
@@ -211,6 +215,10 @@ const MainContent = () => {
             <Route index element={<Home />} />
             <Route path="/reels" element={<AllReels />} />
             <Route path="/project/:slug" element={<Project />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/work" element={<WorkPage />} />
+            <Route path="/cinema" element={<CinemaPage />} />
             <Route path="/mishwa-zalavadiya-video-editor-portfolio" element={<SeoLanding />} />
             <Route path="/mishwa-zalavadiya-portfolio" element={<SeoLanding />} />
             <Route path="/surat-video-editor-portfolio" element={<SeoLanding />} />
