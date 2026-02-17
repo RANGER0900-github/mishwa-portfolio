@@ -917,21 +917,54 @@ const NOSQL_OPERATOR_KEYS = new Set([
     '__proto__', 'prototype', 'constructor'
 ]);
 
-// Canonical host normalization (non-www -> canonical host).
+// Canonical host normalization — redirect ALL non-canonical hosts (www, Railway, etc.) to the canonical domain.
+// This prevents duplicate content indexing and ensures search engines only see the canonical URL.
 app.use((req, res, next) => {
-    if (!CANONICAL_PUBLIC_HOST || !CANONICAL_WWW_HOST) {
+    if (!CANONICAL_PUBLIC_HOST) {
         next();
         return;
     }
 
     const host = getRequestHost(req);
-    if (host !== CANONICAL_WWW_HOST) {
+
+    // Already on canonical host — proceed normally.
+    if (host === CANONICAL_PUBLIC_HOST) {
         next();
         return;
     }
 
+    // Allow API requests from any host (needed for health checks, deploy probes, etc.).
+    if (req.path.startsWith('/api/')) {
+        next();
+        return;
+    }
+
+    // Redirect everything else to the canonical domain with a 301 (permanent).
     const targetUrl = `https://${CANONICAL_PUBLIC_HOST}${req.originalUrl || req.url || '/'}`;
     res.redirect(301, targetUrl);
+});
+
+// Dynamic robots.txt — always uses the canonical URL for sitemap reference.
+app.get('/robots.txt', (req, res) => {
+    const baseUrl = CANONICAL_PUBLIC_URL || `https://${getRequestHost(req)}`;
+    const robotsTxt = [
+        'User-agent: *',
+        'Allow: /',
+        '',
+        '# Disallow admin and API paths',
+        'Disallow: /api/',
+        'Disallow: /admin/',
+        '',
+        '# Crawl-delay (be polite)',
+        'Crawl-delay: 1',
+        '',
+        `Sitemap: ${baseUrl}/sitemap.xml`,
+        `Host: ${CANONICAL_PUBLIC_HOST || getRequestHost(req)}`,
+        ''
+    ].join('\n');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(robotsTxt);
 });
 
 // Security headers

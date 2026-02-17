@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and API paths
+Disallow: /api/
+Disallow: /admin/
+
+# Crawl-delay
+Crawl-delay: 1
+
+Sitemap: https://mishwa.unitednodes.space/sitemap.xml
+Host: mishwa.unitednodes.space
